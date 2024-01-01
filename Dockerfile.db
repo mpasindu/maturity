@@ -1,0 +1,16 @@
+# PostgreSQL Database with Restored Dump
+FROM postgres:15-alpine
+
+# Copy the database dump
+COPY maturity_db_backup.dump /docker-entrypoint-initdb.d/01-restore.sql
+
+# Set environment variables
+ENV POSTGRES_DB=postgres
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=Amazon123!
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+    CMD pg_isready -U postgres
+
+EXPOSE 5432
