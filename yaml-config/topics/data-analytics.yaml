@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: MaturityTopic
+metadata:
+  name: data-analytics
+  uid: topic-003
+  namespace: ea-maturity
+  labels:
+    topic: data-analytics
+    pillar: performance-efficiency
+    assessment-type: detailed
+    complexity: medium
+  annotations:
+    display-name: Data Analytics
+    short-description: Data processing, analytics capabilities, and insights generation...
+    full-description: Data processing, analytics capabilities, and insights generation
+    documentation: https://docs.company.com/topics/data-analytics
+    icon: topic
+    color: hsl(90, 60%, 60%)
+    last-updated: '2025-09-17T02:06:28.372Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium - Affects specific capability areas
+    implementation-effort: Medium
+spec:
+  topic:
+    id: data-analytics
+    name: Data Analytics
+    description: Data processing, analytics capabilities, and insights generation
+  classification:
+    pillar-id: performance-efficiency
+    pillar-name: Performance Efficiency
+    category: assessment-area
+    complexity-level: medium
+  maturity-progression:
+    levels:
+      - level: 1
+        name: Initial
+        description: Basic data analytics practices in place
+        characteristics:
+          - Ad-hoc implementation
+          - Limited documentation
+          - Manual processes
+        typical-practices:
+          - Data modeling
+      - level: 2
+        name: Managed
+        description: Structured data analytics with defined processes
+        characteristics:
+          - Documented procedures
+          - Some automation
+          - Regular reviews
+        typical-practices:
+          - Data modeling
+          - Analytics pipelines
+      - level: 3
+        name: Defined
+        description: Optimized data analytics with continuous improvement
+        characteristics:
+          - Standardized processes
+          - Full automation
+          - Continuous optimization
+        typical-practices:
+          - Data modeling
+          - Analytics pipelines
+          - Real-time processing
+  implementation:
+    practices:
+      - Data modeling
+      - Analytics pipelines
+      - Real-time processing
+    tools:
+      - Analytics platforms
+      - Data lakes
+      - BI tools
+    success-criteria:
+      - Documented processes
+      - Measurable outcomes
+      - Stakeholder alignment
+  relationships:
+    parent-pillar:
+      id: performance-efficiency
+      name: Performance Efficiency
+    metrics:
+      - id: advanced-analytics
+        name: Advanced analytics
+        level: 3
+        active: true
+  assessment:
+    metric-count: 1
+    scoring-method: average
+    assessment-frequency: monthly
+    dependencies: []
+status:
+  assessment-status: active
+  current-maturity: 3
+  metric-coverage: 1 metrics
+  completion-rate: 100%
+  last-assessed: '2025-09-17T02:06:28.372Z'
+  next-assessment: '2025-10-17T02:06:28.372Z'

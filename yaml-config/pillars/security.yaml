@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: MaturityPillar
+metadata:
+  name: security
+  uid: pillar-004
+  namespace: ea-maturity
+  labels:
+    pillar: security
+    assessment-type: comprehensive
+    priority: medium
+    complexity: high
+  annotations:
+    display-name: Security
+    short-description: Protect information, systems, and assets while delivering business value through risk assessments...
+    full-description: Protect information, systems, and assets while delivering business value through risk assessments
+    documentation: https://docs.company.com/pillars/security
+    icon: pillar
+    color: hsl(180, 70%, 50%)
+    last-updated: '2025-09-17T02:06:28.366Z'
+    maintainer: architecture-team@company.com
+    business-impact: High - Strategic pillar affecting multiple business outcomes
+    implementation-complexity: High
+spec:
+  pillar:
+    id: security
+    name: Security
+    description: Protect information, systems, and assets while delivering business value through risk assessments
+  business-context:
+    objectives:
+      - Data protection
+      - Identity management
+      - Infrastructure protection
+    kpis:
+      - Security incidents
+      - Compliance score
+      - Vulnerability resolution time
+    frameworks:
+      - NIST
+      - ISO 27001
+      - OWASP
+    strategic-importance: critical
+    business-alignment:
+      - Operational efficiency
+      - Risk management
+      - Strategic growth
+  structure:
+    topic-count: 1
+    metric-count: 1
+    complexity-distribution:
+      low: 1
+      medium: 0
+      high: 0
+  relationships:
+    topics:
+      - id: security-fundamentals
+        name: Security Fundamentals
+        metric-count: 1
+  assessment:
+    scoring-method: weighted-average
+    maturity-levels:
+      '1':
+        name: Initial
+        description: Ad-hoc processes, limited documentation
+      '2':
+        name: Managed
+        description: Documented processes, some automation
+      '3':
+        name: Defined
+        description: Standardized processes, full automation
+    assessment-frequency: quarterly
+  governance:
+    owner: Architecture Team
+    stakeholders:
+      - CTO
+      - Engineering Leads
+      - Operations Team
+    review-cycle: quarterly
+    approval-required: true
+status:
+  assessment-status: active
+  current-maturity: 1
+  topic-coverage: 1 topics
+  metric-coverage: 1 metrics
+  last-assessed: '2025-09-17T02:06:28.366Z'
+  next-assessment: '2025-12-16T02:06:28.366Z'

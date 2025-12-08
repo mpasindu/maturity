@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: MaturityMetric
+metadata:
+  name: advanced-analytics
+  uid: metric-005
+  namespace: ea-maturity
+  labels:
+    metric: advanced-analytics
+    topic: data-analytics
+    pillar: performance-efficiency
+    level: '3'
+    complexity: high
+    assessment-type: qualitative
+  annotations:
+    display-name: Advanced analytics
+    short-description: Advanced analytics capabilities including machine learning, predictive analytics, and real-time data...
+    full-description: Advanced analytics capabilities including machine learning, predictive analytics, and real-time data processing.
+    documentation: https://docs.company.com/metrics/advanced-analytics
+    icon: metric
+    color: '#10b981'
+    last-updated: '2025-09-17T02:06:28.381Z'
+    maintainer: architecture-team@company.com
+    business-impact: High
+    automation-potential: Medium
+spec:
+  metric:
+    id: advanced-analytics
+    name: Advanced analytics
+    description: Advanced analytics capabilities including machine learning, predictive analytics, and real-time data processing.
+  classification:
+    topic-id: data-analytics
+    pillar-id: performance-efficiency
+    level: 3
+    maturity-level: defined
+  configuration:
+    active: true
+    required: true
+    weight: 1.5
+    assessment-frequency: quarterly
+  assessment:
+    type: qualitative
+    method: checklist
+    scoring:
+      scale: 1-3
+      min-value: 1
+      max-value: 3
+      current-value: 3
+    criteria:
+      level-3:
+        score: 3
+        name: Defined
+        description: >-
+          Advanced analytics capabilities including machine learning, predictive analytics, and real-time data
+          processing.
+        risk-level: Low
+  data-collection:
+    sources:
+      - Documentation review
+      - Technical interviews
+      - System analysis
+    tools:
+      - category: Assessment
+        tools:
+          - Questionnaires
+          - Code analysis
+          - Architecture review
+  business-context:
+    cost-impact:
+      level-3: Optimized costs
+    success-metrics:
+      - name: Advanced analytics Score
+        target: ≥ 2.5
+  tags:
+    - analytics
+    - ml
+    - ai
+status:
+  assessment-status: active
+  last-assessed: '2025-09-17T02:06:28.381Z'
+  next-assessment: '2025-12-16T02:06:28.381Z'
+  current-score: 3
+  trend: stable
+  confidence-level: high

@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: MaturityMetric
+metadata:
+  name: no-redundancy
+  uid: metric-002
+  namespace: ea-maturity
+  labels:
+    metric: no-redundancy
+    topic: application-design
+    pillar: operational-excellence
+    level: '1'
+    complexity: low
+    assessment-type: qualitative
+  annotations:
+    display-name: No redundancy
+    short-description: Redundancy in application development refers to unnecessary or duplicate elements within the codebas...
+    full-description: >-
+      Redundancy in application development refers to unnecessary or duplicate elements within the codebase, processes,
+      or resources.
+    documentation: https://docs.company.com/metrics/no-redundancy
+    icon: metric
+    color: '#ef4444'
+    last-updated: '2025-09-17T02:06:28.377Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium
+    automation-potential: Medium
+spec:
+  metric:
+    id: no-redundancy
+    name: No redundancy
+    description: >-
+      Redundancy in application development refers to unnecessary or duplicate elements within the codebase, processes,
+      or resources.
+  classification:
+    topic-id: application-design
+    pillar-id: operational-excellence
+    level: 1
+    maturity-level: initial
+  configuration:
+    active: true
+    required: true
+    weight: 1
+    assessment-frequency: quarterly
+  assessment:
+    type: qualitative
+    method: checklist
+    scoring:
+      scale: 1-3
+      min-value: 1
+      max-value: 3
+      current-value: 1
+    criteria:
+      level-1:
+        score: 1
+        name: Initial
+        description: >-
+          Redundancy in application development refers to unnecessary or duplicate elements within the codebase,
+          processes, or resources.
+        risk-level: High
+  data-collection:
+    sources:
+      - Documentation review
+      - Technical interviews
+      - System analysis
+    tools:
+      - category: Assessment
+        tools:
+          - Questionnaires
+          - Code analysis
+          - Architecture review
+  business-context:
+    cost-impact:
+      level-1: High maintenance costs
+    success-metrics:
+      - name: No redundancy Score
+        target: ≥ 2.5
+  tags: []
+status:
+  assessment-status: active
+  last-assessed: '2025-09-17T02:06:28.377Z'
+  next-assessment: '2025-12-16T02:06:28.377Z'
+  current-score: 1
+  trend: stable
+  confidence-level: high

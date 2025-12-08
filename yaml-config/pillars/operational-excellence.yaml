@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: MaturityPillar
+metadata:
+  name: operational-excellence
+  uid: pillar-001
+  namespace: ea-maturity
+  labels:
+    pillar: operational-excellence
+    assessment-type: comprehensive
+    priority: high
+    complexity: high
+  annotations:
+    display-name: Operational Excellence
+    short-description: Focus on running and monitoring systems to deliver business value and continually improve supporting...
+    full-description: >-
+      Focus on running and monitoring systems to deliver business value and continually improve supporting processes and
+      procedures
+    documentation: https://docs.company.com/pillars/operational-excellence
+    icon: pillar
+    color: hsl(0, 70%, 50%)
+    last-updated: '2025-09-17T02:06:28.359Z'
+    maintainer: architecture-team@company.com
+    business-impact: High - Strategic pillar affecting multiple business outcomes
+    implementation-complexity: High
+spec:
+  pillar:
+    id: operational-excellence
+    name: Operational Excellence
+    description: >-
+      Focus on running and monitoring systems to deliver business value and continually improve supporting processes and
+      procedures
+  business-context:
+    objectives:
+      - Operational efficiency
+      - Automated operations
+      - Continuous improvement
+    kpis:
+      - System uptime
+      - Deployment frequency
+      - Mean time to recovery
+    frameworks:
+      - ITIL
+      - DevOps
+      - SRE
+    strategic-importance: critical
+    business-alignment:
+      - Operational efficiency
+      - Risk management
+      - Strategic growth
+  structure:
+    topic-count: 2
+    metric-count: 4
+    complexity-distribution:
+      low: 3
+      medium: 1
+      high: 0
+  relationships:
+    topics:
+      - id: application-design
+        name: Application design
+        metric-count: 3
+      - id: monitoring-observability
+        name: Monitoring & Observability
+        metric-count: 1
+  assessment:
+    scoring-method: weighted-average
+    maturity-levels:
+      '1':
+        name: Initial
+        description: Ad-hoc processes, limited documentation
+      '2':
+        name: Managed
+        description: Documented processes, some automation
+      '3':
+        name: Defined
+        description: Standardized processes, full automation
+    assessment-frequency: quarterly
+  governance:
+    owner: Architecture Team
+    stakeholders:
+      - CTO
+      - Engineering Leads
+      - Operations Team
+    review-cycle: quarterly
+    approval-required: true
+status:
+  assessment-status: active
+  current-maturity: 1.3
+  topic-coverage: 2 topics
+  metric-coverage: 4 metrics
+  last-assessed: '2025-09-17T02:06:28.360Z'
+  next-assessment: '2025-12-16T02:06:28.360Z'

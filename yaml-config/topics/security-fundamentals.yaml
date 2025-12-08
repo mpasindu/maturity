@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: MaturityTopic
+metadata:
+  name: security-fundamentals
+  uid: topic-005
+  namespace: ea-maturity
+  labels:
+    topic: security-fundamentals
+    pillar: security
+    assessment-type: detailed
+    complexity: medium
+  annotations:
+    display-name: Security Fundamentals
+    short-description: Core security practices, policies, and implementation guidelines...
+    full-description: Core security practices, policies, and implementation guidelines
+    documentation: https://docs.company.com/topics/security-fundamentals
+    icon: topic
+    color: hsl(180, 60%, 60%)
+    last-updated: '2025-09-17T02:06:28.373Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium - Affects specific capability areas
+    implementation-effort: Medium
+spec:
+  topic:
+    id: security-fundamentals
+    name: Security Fundamentals
+    description: Core security practices, policies, and implementation guidelines
+  classification:
+    pillar-id: security
+    pillar-name: Security
+    category: assessment-area
+    complexity-level: medium
+  maturity-progression:
+    levels:
+      - level: 1
+        name: Initial
+        description: Basic security fundamentals practices in place
+        characteristics:
+          - Ad-hoc implementation
+          - Limited documentation
+          - Manual processes
+        typical-practices:
+          - Security by design
+      - level: 2
+        name: Managed
+        description: Structured security fundamentals with defined processes
+        characteristics:
+          - Documented procedures
+          - Some automation
+          - Regular reviews
+        typical-practices:
+          - Security by design
+          - Threat modeling
+      - level: 3
+        name: Defined
+        description: Optimized security fundamentals with continuous improvement
+        characteristics:
+          - Standardized processes
+          - Full automation
+          - Continuous optimization
+        typical-practices:
+          - Security by design
+          - Threat modeling
+          - Security testing
+  implementation:
+    practices:
+      - Security by design
+      - Threat modeling
+      - Security testing
+    tools:
+      - Security scanners
+      - SIEM
+      - Identity management
+    success-criteria:
+      - Documented processes
+      - Measurable outcomes
+      - Stakeholder alignment
+  relationships:
+    parent-pillar:
+      id: security
+      name: Security
+    metrics:
+      - id: security-baseline
+        name: Security baseline
+        level: 1
+        active: true
+  assessment:
+    metric-count: 1
+    scoring-method: average
+    assessment-frequency: monthly
+    dependencies: []
+status:
+  assessment-status: active
+  current-maturity: 1
+  metric-coverage: 1 metrics
+  completion-rate: 100%
+  last-assessed: '2025-09-17T02:06:28.373Z'
+  next-assessment: '2025-10-17T02:06:28.373Z'

@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: MaturityMetric
+metadata:
+  name: application-redundancy
+  uid: metric-003
+  namespace: ea-maturity
+  labels:
+    metric: application-redundancy
+    topic: application-design
+    pillar: operational-excellence
+    level: '2'
+    complexity: medium
+    assessment-type: qualitative
+  annotations:
+    display-name: Application redundancy
+    short-description: Level 2 application redundancy involves implementing measures like data replication, failover mechan...
+    full-description: >-
+      Level 2 application redundancy involves implementing measures like data replication, failover mechanisms, load
+      balancing, and high availability architecture.
+    documentation: https://docs.company.com/metrics/application-redundancy
+    icon: metric
+    color: '#f59e0b'
+    last-updated: '2025-09-17T02:06:28.380Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium
+    automation-potential: Medium
+spec:
+  metric:
+    id: application-redundancy
+    name: Application redundancy
+    description: >-
+      Level 2 application redundancy involves implementing measures like data replication, failover mechanisms, load
+      balancing, and high availability architecture.
+  classification:
+    topic-id: application-design
+    pillar-id: operational-excellence
+    level: 2
+    maturity-level: managed
+  configuration:
+    active: true
+    required: true
+    weight: 1
+    assessment-frequency: quarterly
+  assessment:
+    type: qualitative
+    method: checklist
+    scoring:
+      scale: 1-3
+      min-value: 1
+      max-value: 3
+      current-value: 2
+    criteria:
+      level-2:
+        score: 2
+        name: Managed
+        description: >-
+          Level 2 application redundancy involves implementing measures like data replication, failover mechanisms, load
+          balancing, and high availability architecture.
+        risk-level: Medium
+  data-collection:
+    sources:
+      - Documentation review
+      - Technical interviews
+      - System analysis
+    tools:
+      - category: Assessment
+        tools:
+          - Questionnaires
+          - Code analysis
+          - Architecture review
+  business-context:
+    cost-impact:
+      level-2: Medium costs
+    success-metrics:
+      - name: Application redundancy Score
+        target: ≥ 2.5
+  tags: []
+status:
+  assessment-status: active
+  last-assessed: '2025-09-17T02:06:28.380Z'
+  next-assessment: '2025-12-16T02:06:28.380Z'
+  current-score: 2
+  trend: stable
+  confidence-level: high

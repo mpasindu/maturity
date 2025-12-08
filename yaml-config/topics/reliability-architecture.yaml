@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: MaturityTopic
+metadata:
+  name: reliability-architecture
+  uid: topic-006
+  namespace: ea-maturity
+  labels:
+    topic: reliability-architecture
+    pillar: reliability
+    assessment-type: detailed
+    complexity: medium
+  annotations:
+    display-name: Reliability Architecture
+    short-description: System reliability, availability, and resilience design patterns...
+    full-description: System reliability, availability, and resilience design patterns
+    documentation: https://docs.company.com/topics/reliability-architecture
+    icon: topic
+    color: hsl(225, 60%, 60%)
+    last-updated: '2025-09-17T02:06:28.373Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium - Affects specific capability areas
+    implementation-effort: Medium
+spec:
+  topic:
+    id: reliability-architecture
+    name: Reliability Architecture
+    description: System reliability, availability, and resilience design patterns
+  classification:
+    pillar-id: reliability
+    pillar-name: Reliability
+    category: assessment-area
+    complexity-level: medium
+  maturity-progression:
+    levels:
+      - level: 1
+        name: Initial
+        description: Basic reliability architecture practices in place
+        characteristics:
+          - Ad-hoc implementation
+          - Limited documentation
+          - Manual processes
+        typical-practices:
+          - Fault tolerance
+      - level: 2
+        name: Managed
+        description: Structured reliability architecture with defined processes
+        characteristics:
+          - Documented procedures
+          - Some automation
+          - Regular reviews
+        typical-practices:
+          - Fault tolerance
+          - Circuit breakers
+      - level: 3
+        name: Defined
+        description: Optimized reliability architecture with continuous improvement
+        characteristics:
+          - Standardized processes
+          - Full automation
+          - Continuous optimization
+        typical-practices:
+          - Fault tolerance
+          - Circuit breakers
+          - Graceful degradation
+  implementation:
+    practices:
+      - Fault tolerance
+      - Circuit breakers
+      - Graceful degradation
+    tools:
+      - Chaos engineering
+      - Health checks
+      - SLA monitoring
+    success-criteria:
+      - Documented processes
+      - Measurable outcomes
+      - Stakeholder alignment
+  relationships:
+    parent-pillar:
+      id: reliability
+      name: Reliability
+    metrics:
+      - id: high-availability-design
+        name: High availability design
+        level: 3
+        active: true
+  assessment:
+    metric-count: 1
+    scoring-method: average
+    assessment-frequency: monthly
+    dependencies: []
+status:
+  assessment-status: active
+  current-maturity: 3
+  metric-coverage: 1 metrics
+  completion-rate: 100%
+  last-assessed: '2025-09-17T02:06:28.373Z'
+  next-assessment: '2025-10-17T02:06:28.373Z'

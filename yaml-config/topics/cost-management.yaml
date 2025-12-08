@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: MaturityTopic
+metadata:
+  name: cost-management
+  uid: topic-004
+  namespace: ea-maturity
+  labels:
+    topic: cost-management
+    pillar: cost-optimization
+    assessment-type: detailed
+    complexity: medium
+  annotations:
+    display-name: Cost Management
+    short-description: Cost optimization, budgeting, and financial governance practices...
+    full-description: Cost optimization, budgeting, and financial governance practices
+    documentation: https://docs.company.com/topics/cost-management
+    icon: topic
+    color: hsl(135, 60%, 60%)
+    last-updated: '2025-09-17T02:06:28.372Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium - Affects specific capability areas
+    implementation-effort: Medium
+spec:
+  topic:
+    id: cost-management
+    name: Cost Management
+    description: Cost optimization, budgeting, and financial governance practices
+  classification:
+    pillar-id: cost-optimization
+    pillar-name: Cost Optimization
+    category: assessment-area
+    complexity-level: medium
+  maturity-progression:
+    levels:
+      - level: 1
+        name: Initial
+        description: Basic cost management practices in place
+        characteristics:
+          - Ad-hoc implementation
+          - Limited documentation
+          - Manual processes
+        typical-practices:
+          - Cost allocation
+      - level: 2
+        name: Managed
+        description: Structured cost management with defined processes
+        characteristics:
+          - Documented procedures
+          - Some automation
+          - Regular reviews
+        typical-practices:
+          - Cost allocation
+          - Budget monitoring
+      - level: 3
+        name: Defined
+        description: Optimized cost management with continuous improvement
+        characteristics:
+          - Standardized processes
+          - Full automation
+          - Continuous optimization
+        typical-practices:
+          - Cost allocation
+          - Budget monitoring
+          - Resource optimization
+  implementation:
+    practices:
+      - Cost allocation
+      - Budget monitoring
+      - Resource optimization
+    tools:
+      - Cost management tools
+      - Budget alerts
+      - Usage analytics
+    success-criteria:
+      - Documented processes
+      - Measurable outcomes
+      - Stakeholder alignment
+  relationships:
+    parent-pillar:
+      id: cost-optimization
+      name: Cost Optimization
+    metrics:
+      - id: cost-optimization
+        name: Cost optimization
+        level: 2
+        active: true
+  assessment:
+    metric-count: 1
+    scoring-method: average
+    assessment-frequency: monthly
+    dependencies: []
+status:
+  assessment-status: active
+  current-maturity: 2
+  metric-coverage: 1 metrics
+  completion-rate: 100%
+  last-assessed: '2025-09-17T02:06:28.372Z'
+  next-assessment: '2025-10-17T02:06:28.372Z'

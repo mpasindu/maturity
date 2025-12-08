@@ -1,0 +1,397 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  logoUrl     String?
+  website     String?
+  contactEmail String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assessmentTargets AssessmentTarget[]
+
+  @@map("organizations")
+}
+
+model MaturityPillar {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  weight      Decimal  @default(1.0) @db.Decimal(3, 2)
+  category    Category
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topics            AssessmentTopic[]
+  assessmentSessions AssessmentSession[]
+
+  @@map("maturity_pillars")
+}
+
+model AssessmentTopic {
+  id          String  @id @default(uuid())
+  pillarId    String
+  name        String
+  description String?
+  weight      Decimal @default(1.0) @db.Decimal(3, 2)
+  orderIndex  Int     @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pillar  MaturityPillar @relation(fields: [pillarId], references: [id])
+  metrics Metric[]
+
+  @@map("assessment_topics")
+}
+
+model Metric {
+  id                String     @id @default(uuid())
+  topicId           String
+  name              String
+  description       String?
+  metricType        MetricType
+  minValue          Decimal    @default(0) @db.Decimal(10, 2)
+  maxValue          Decimal    @default(5) @db.Decimal(10, 2)
+  weight            Decimal    @default(1.0) @db.Decimal(3, 2)
+  level             Int        @default(1) // Maturity level (1, 2, 3)
+  active            Boolean    @default(true) // Whether this metric is currently active
+  tags              String[]   @default([]) // Tags for categorization
+  calculationFormula String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  topic             AssessmentTopic   @relation(fields: [topicId], references: [id])
+  assessmentResults AssessmentResult[]
+
+  @@map("metrics")
+}
+
+model AssessmentTarget {
+  id             String        @id @default(uuid())
+  organizationId String
+  name           String
+  type           TargetType
+  description    String?
+  technologyStack Json?
+  cloudProvider  CloudProvider?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  assessmentSessions AssessmentSession[]
+  maturityCalculations MaturityCalculation[]
+  maturityTrends     MaturityTrend[]
+
+  @@map("assessment_targets")
+}
+
+model AssessmentType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  category    String?
+  isActive    Boolean  @default(true)
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("assessment_types")
+}
+
+model AssessmentSession {
+  id              String        @id @default(uuid())
+  targetId        String
+  assessorId      String
+  status          SessionStatus @default(DRAFT)
+  currentPillarId String?
+  scoringRuleId   String?       // Reference to scoring rule, falls back to default if null
+  progressData    Json?
+  startedAt       DateTime      @default(now())
+  completedAt     DateTime?
+  lastModified    DateTime      @default(now()) @updatedAt
+
+  target            AssessmentTarget   @relation(fields: [targetId], references: [id])
+  currentPillar     MaturityPillar?    @relation(fields: [currentPillarId], references: [id])
+  scoringRule       ScoringRules?      @relation(fields: [scoringRuleId], references: [id])
+  assessmentResults AssessmentResult[]
+  auditLogs         AuditLog[]
+  maturityCalculations MaturityCalculation[]
+
+  @@map("assessment_sessions")
+}
+
+model AssessmentResult {
+  id           String   @id @default(uuid())
+  sessionId    String
+  metricId     String
+  value        Decimal  @db.Decimal(10, 2)
+  notes        String?
+  evidenceUrls String[]
+  assessedAt   DateTime @default(now())
+
+  session AssessmentSession @relation(fields: [sessionId], references: [id])
+  metric  Metric            @relation(fields: [metricId], references: [id])
+
+  @@map("assessment_results")
+}
+
+model AuditLog {
+  id         String    @id @default(uuid())
+  sessionId  String?
+  userId     String
+  action     String
+  entityType String?
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime  @default(now())
+
+  session AssessmentSession? @relation(fields: [sessionId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole @default(VIEWER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum Category {
+  OPERATIONAL_EXCELLENCE
+  RELIABILITY
+  SECURITY
+  PERFORMANCE_EFFICIENCY
+  COST_OPTIMIZATION
+  SUSTAINABILITY
+}
+
+enum MetricType {
+  SCALE
+  BOOLEAN
+  PERCENTAGE
+  COUNT
+}
+
+enum TargetType {
+  PLATFORM
+  SYSTEM
+  APPLICATION
+  CLOUD
+  TOOLS
+  PROCESS
+  INFRASTRUCTURE
+  SERVICE
+}
+
+enum CloudProvider {
+  AWS
+  AZURE
+  GCP
+  HYBRID
+  ON_PREMISE
+}
+
+enum SessionStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+enum UserRole {
+  ADMIN
+  ASSESSOR
+  VIEWER
+}
+
+// Maturity Calculation Results and Decision Tracking
+model MaturityCalculation {
+  id                String   @id @default(uuid())
+  sessionId         String
+  targetId          String
+  targetType        TargetType
+  overallScore      Decimal  @db.Decimal(4, 2)
+  maturityLevel     MaturityLevel
+  confidence        Decimal  @db.Decimal(3, 2)
+  algorithmVersion  String
+  calculatedAt      DateTime @default(now())
+  
+  // New fields for enhanced calculation system
+  scoringRuleId     String?  // Reference to the scoring rule used
+  isLatest          Boolean  @default(true)  // Flag to identify the latest calculation for this target
+  
+  // JSON fields for detailed breakdown
+  pillarBreakdown   Json     // PillarScore[]
+  topicBreakdown    Json     // TopicScore[]
+  metricBreakdown   Json     // MetricScore[]
+  explanation       Json     // CalculationExplanation
+  
+  session           AssessmentSession @relation(fields: [sessionId], references: [id])
+  target            AssessmentTarget @relation(fields: [targetId], references: [id])
+  scoringRule       ScoringRules?     @relation(fields: [scoringRuleId], references: [id])
+  decisions         CalculationDecision[]
+  
+  @@index([targetId, isLatest])
+  @@map("maturity_calculations")
+}
+
+model CalculationDecision {
+  id                  String   @id @default(uuid())
+  calculationId       String
+  stage               DecisionStage
+  entityId            String
+  entityName          String
+  decision            String
+  reasoning           String
+  factors             String[] // Array of factor descriptions
+  impact              ImpactLevel
+  confidence          Decimal  @db.Decimal(3, 2)
+  timestamp           DateTime @default(now())
+  
+  calculation         MaturityCalculation @relation(fields: [calculationId], references: [id])
+  
+  @@map("calculation_decisions")
+}
+
+model MaturityTrend {
+  id                String   @id @default(uuid())
+  targetId          String
+  targetType        TargetType
+  pillarId          String?
+  topicId           String?
+  metricId          String?
+  score             Decimal  @db.Decimal(4, 2)
+  calculatedAt      DateTime @default(now())
+  
+  target            AssessmentTarget @relation(fields: [targetId], references: [id])
+  
+  @@index([targetId, calculatedAt])
+  @@index([pillarId, calculatedAt])
+  @@index([topicId, calculatedAt])
+  @@index([metricId, calculatedAt])
+  @@map("maturity_trends")
+}
+
+model CalculationConfig {
+  id                String   @id @default(uuid())
+  configType        ConfigType
+  targetType        TargetType?
+  entityId          String?  // pillar/topic/metric id
+  weight            Decimal  @db.Decimal(3, 2)
+  multiplier        Decimal  @db.Decimal(3, 2) @default(1.0)
+  threshold         Decimal? @db.Decimal(3, 2)
+  isActive          Boolean  @default(true)
+  validFrom         DateTime @default(now())
+  validTo           DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("calculation_configs")
+}
+
+model ScoringRules {
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  description           String?
+  isActive              Boolean  @default(true)
+  isDefault             Boolean  @default(false)
+  
+  // Level 1: Metric Scoring Rules
+  metricAnsweredValue   Int      @default(1)     // Use level value if answered
+  metricUnansweredValue Int      @default(0)     // Value if not answered
+  metricMaxLevel        Int      @default(5)     // Maximum possible level
+  
+  // Level 2: Topic Scoring Rules
+  topicScoreMethod      ScoringMethod @default(PERCENTAGE_TO_SCALE)
+  topicScaleMin         Decimal  @db.Decimal(3, 2) @default(0.0)
+  topicScaleMax         Decimal  @db.Decimal(3, 2) @default(5.0)
+  topicExcludeEmpty     Boolean  @default(true)   // Exclude topics with no answered metrics
+  
+  // Level 3: Pillar Scoring Rules
+  pillarScoreMethod     ScoringMethod @default(AVERAGE)
+  pillarExcludeEmpty    Boolean  @default(true)   // Exclude pillars with no answered topics
+  pillarMinTopics       Int      @default(1)     // Minimum topics required for valid pillar score
+  
+  // Level 4: Application Overall Rules
+  overallScoreMethod    ScoringMethod @default(AVERAGE)
+  overallExcludeEmpty   Boolean  @default(true)   // Exclude pillars with no answers
+  overallMinPillars     Int      @default(1)     // Minimum pillars required for valid score
+  
+  // Additional Configuration
+  roundingPrecision     Int      @default(2)     // Decimal places for rounding
+  penalizeIncomplete    Boolean  @default(true)   // Apply penalty for incomplete assessments
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  createdBy             String?  // User who created these rules
+
+  // Relations
+  assessmentSessions    AssessmentSession[]
+  maturityCalculations  MaturityCalculation[]
+  
+  @@map("scoring_rules")
+}
+
+enum ScoringMethod {
+  AVERAGE              // Simple average
+  WEIGHTED_AVERAGE     // Weighted by entity weights
+  PERCENTAGE_TO_SCALE  // Convert percentage (0-1) to scale (0-5)
+  SUM                  // Simple sum
+  MEDIAN               // Median value
+  MIN                  // Minimum value
+  MAX                  // Maximum value
+}
+
+enum MaturityLevel {
+  INITIAL
+  MANAGED
+  DEFINED
+  OPTIMIZING
+}
+
+enum DecisionStage {
+  METRIC
+  TOPIC
+  PILLAR
+  OVERALL
+}
+
+enum ImpactLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ConfigType {
+  PILLAR_WEIGHT
+  TOPIC_WEIGHT
+  METRIC_WEIGHT
+  LEVEL_MULTIPLIER
+  TARGET_FACTOR
+  THRESHOLD
+}

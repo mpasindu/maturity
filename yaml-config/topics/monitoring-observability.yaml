@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: MaturityTopic
+metadata:
+  name: monitoring-observability
+  uid: topic-002
+  namespace: ea-maturity
+  labels:
+    topic: monitoring-observability
+    pillar: operational-excellence
+    assessment-type: detailed
+    complexity: medium
+  annotations:
+    display-name: Monitoring & Observability
+    short-description: System monitoring, logging, tracing, and observability practices...
+    full-description: System monitoring, logging, tracing, and observability practices
+    documentation: https://docs.company.com/topics/monitoring-observability
+    icon: topic
+    color: hsl(45, 60%, 60%)
+    last-updated: '2025-09-17T02:06:28.368Z'
+    maintainer: architecture-team@company.com
+    business-impact: Medium - Affects specific capability areas
+    implementation-effort: Medium
+spec:
+  topic:
+    id: monitoring-observability
+    name: Monitoring & Observability
+    description: System monitoring, logging, tracing, and observability practices
+  classification:
+    pillar-id: operational-excellence
+    pillar-name: Operational Excellence
+    category: assessment-area
+    complexity-level: medium
+  maturity-progression:
+    levels:
+      - level: 1
+        name: Initial
+        description: Basic monitoring & observability practices in place
+        characteristics:
+          - Ad-hoc implementation
+          - Limited documentation
+          - Manual processes
+        typical-practices:
+          - Distributed tracing
+      - level: 2
+        name: Managed
+        description: Structured monitoring & observability with defined processes
+        characteristics:
+          - Documented procedures
+          - Some automation
+          - Regular reviews
+        typical-practices:
+          - Distributed tracing
+          - Structured logging
+      - level: 3
+        name: Defined
+        description: Optimized monitoring & observability with continuous improvement
+        characteristics:
+          - Standardized processes
+          - Full automation
+          - Continuous optimization
+        typical-practices:
+          - Distributed tracing
+          - Structured logging
+          - Metrics collection
+  implementation:
+    practices:
+      - Distributed tracing
+      - Structured logging
+      - Metrics collection
+    tools:
+      - APM tools
+      - Log aggregation
+      - Monitoring dashboards
+    success-criteria:
+      - Documented processes
+      - Measurable outcomes
+      - Stakeholder alignment
+  relationships:
+    parent-pillar:
+      id: operational-excellence
+      name: Operational Excellence
+    metrics:
+      - id: monitoring-basics
+        name: Monitoring basics
+        level: 1
+        active: true
+  assessment:
+    metric-count: 1
+    scoring-method: average
+    assessment-frequency: monthly
+    dependencies: []
+status:
+  assessment-status: active
+  current-maturity: 1
+  metric-coverage: 1 metrics
+  completion-rate: 100%
+  last-assessed: '2025-09-17T02:06:28.368Z'
+  next-assessment: '2025-10-17T02:06:28.368Z'

@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: MaturityAssessmentConfig
+metadata:
+  name: ea-maturity-assessment
+  uid: config-001
+  namespace: ea-maturity
+  labels:
+    config-type: master
+    version: v1.0.0
+    environment: production
+  annotations:
+    display-name: Enterprise Architecture Maturity Assessment
+    short-description: Comprehensive EA maturity assessment configuration with dynamic structure
+    full-description: >-
+      Complete configuration for enterprise architecture maturity assessment including all pillars, topics, and metrics
+      with comprehensive metadata and business context
+    documentation: https://docs.company.com/ea-maturity
+    icon: assessment
+    last-updated: '2025-09-17T02:06:28.383Z'
+    maintainer: architecture-team@company.com
+    business-owner: Chief Architect
+    compliance-frameworks: TOGAF, COBIT, ISO 27001
+spec:
+  assessment:
+    name: Enterprise Architecture Maturity Assessment
+    version: 1.0.0
+    description: Comprehensive assessment framework for enterprise architecture maturity
+  structure:
+    pillar-count: 5
+    topic-count: 6
+    metric-count: 8
+    total-assessments: 19
+  references:
+    pillars:
+      - id: operational-excellence
+        name: Operational Excellence
+        file: pillars/operational-excellence.yaml
+      - id: performance-efficiency
+        name: Performance Efficiency
+        file: pillars/performance-efficiency.yaml
+      - id: cost-optimization
+        name: Cost Optimization
+        file: pillars/cost-optimization.yaml
+      - id: security
+        name: Security
+        file: pillars/security.yaml
+      - id: reliability
+        name: Reliability
+        file: pillars/reliability.yaml
+    topics:
+      - id: application-design
+        name: Application design
+        file: topics/application-design.yaml
+      - id: monitoring-observability
+        name: Monitoring & Observability
+        file: topics/monitoring-observability.yaml
+      - id: data-analytics
+        name: Data Analytics
+        file: topics/data-analytics.yaml
+      - id: cost-management
+        name: Cost Management
+        file: topics/cost-management.yaml
+      - id: security-fundamentals
+        name: Security Fundamentals
+        file: topics/security-fundamentals.yaml
+      - id: reliability-architecture
+        name: Reliability Architecture
+        file: topics/reliability-architecture.yaml
+    metrics:
+      - id: legacy-application-codebase
+        name: Legacy application codebase
+        file: metrics/legacy-application-codebase.yaml
+      - id: no-redundancy
+        name: No redundancy
+        file: metrics/no-redundancy.yaml
+      - id: application-redundancy
+        name: Application redundancy
+        file: metrics/application-redundancy.yaml
+      - id: monitoring-basics
+        name: Monitoring basics
+        file: metrics/monitoring-basics.yaml
+      - id: advanced-analytics
+        name: Advanced analytics
+        file: metrics/advanced-analytics.yaml
+      - id: cost-optimization
+        name: Cost optimization
+        file: metrics/cost-optimization.yaml
+      - id: security-baseline
+        name: Security baseline
+        file: metrics/security-baseline.yaml
+      - id: high-availability-design
+        name: High availability design
+        file: metrics/high-availability-design.yaml
+  business-context:
+    strategic-objectives:
+      - Improve operational efficiency
+      - Enhance system reliability
+      - Optimize costs
+      - Strengthen security posture
+      - Increase performance
+    success-metrics:
+      - name: Overall Maturity Score
+        target: ≥ 2.5
+      - name: Assessment Completion Rate
+        target: 100%
+      - name: Action Item Resolution
+        target: ≥ 80%
+status:
+  config-status: active
+  last-updated: '2025-09-17T02:06:28.383Z'
+  generated-files: 19
+  version: 1.0.0

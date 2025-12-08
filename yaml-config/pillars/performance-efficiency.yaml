@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: MaturityPillar
+metadata:
+  name: performance-efficiency
+  uid: pillar-002
+  namespace: ea-maturity
+  labels:
+    pillar: performance-efficiency
+    assessment-type: comprehensive
+    priority: high
+    complexity: high
+  annotations:
+    display-name: Performance Efficiency
+    short-description: Use computing resources efficiently to meet system requirements and maintain efficiency as demand ch...
+    full-description: Use computing resources efficiently to meet system requirements and maintain efficiency as demand changes
+    documentation: https://docs.company.com/pillars/performance-efficiency
+    icon: pillar
+    color: hsl(60, 70%, 50%)
+    last-updated: '2025-09-17T02:06:28.362Z'
+    maintainer: architecture-team@company.com
+    business-impact: High - Strategic pillar affecting multiple business outcomes
+    implementation-complexity: High
+spec:
+  pillar:
+    id: performance-efficiency
+    name: Performance Efficiency
+    description: Use computing resources efficiently to meet system requirements and maintain efficiency as demand changes
+  business-context:
+    objectives:
+      - Resource optimization
+      - Performance monitoring
+      - Scalable architectures
+    kpis:
+      - Response time
+      - Throughput
+      - Resource utilization
+    frameworks:
+      - Performance testing
+      - Load testing
+      - Capacity planning
+    strategic-importance: critical
+    business-alignment:
+      - Operational efficiency
+      - Risk management
+      - Strategic growth
+  structure:
+    topic-count: 1
+    metric-count: 1
+    complexity-distribution:
+      low: 0
+      medium: 0
+      high: 1
+  relationships:
+    topics:
+      - id: data-analytics
+        name: Data Analytics
+        metric-count: 1
+  assessment:
+    scoring-method: weighted-average
+    maturity-levels:
+      '1':
+        name: Initial
+        description: Ad-hoc processes, limited documentation
+      '2':
+        name: Managed
+        description: Documented processes, some automation
+      '3':
+        name: Defined
+        description: Standardized processes, full automation
+    assessment-frequency: quarterly
+  governance:
+    owner: Architecture Team
+    stakeholders:
+      - CTO
+      - Engineering Leads
+      - Operations Team
+    review-cycle: quarterly
+    approval-required: true
+status:
+  assessment-status: active
+  current-maturity: 3
+  topic-coverage: 1 topics
+  metric-coverage: 1 metrics
+  last-assessed: '2025-09-17T02:06:28.362Z'
+  next-assessment: '2025-12-16T02:06:28.362Z'

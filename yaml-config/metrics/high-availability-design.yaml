@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: MaturityMetric
+metadata:
+  name: high-availability-design
+  uid: metric-008
+  namespace: ea-maturity
+  labels:
+    metric: high-availability-design
+    topic: reliability-architecture
+    pillar: reliability
+    level: '3'
+    complexity: high
+    assessment-type: qualitative
+  annotations:
+    display-name: High availability design
+    short-description: Designing systems for high availability with disaster recovery, failover mechanisms, and resilience ...
+    full-description: Designing systems for high availability with disaster recovery, failover mechanisms, and resilience patterns.
+    documentation: https://docs.company.com/metrics/high-availability-design
+    icon: metric
+    color: '#10b981'
+    last-updated: '2025-09-17T02:06:28.382Z'
+    maintainer: architecture-team@company.com
+    business-impact: High
+    automation-potential: Medium
+spec:
+  metric:
+    id: high-availability-design
+    name: High availability design
+    description: Designing systems for high availability with disaster recovery, failover mechanisms, and resilience patterns.
+  classification:
+    topic-id: reliability-architecture
+    pillar-id: reliability
+    level: 3
+    maturity-level: defined
+  configuration:
+    active: true
+    required: true
+    weight: 1.5
+    assessment-frequency: quarterly
+  assessment:
+    type: qualitative
+    method: checklist
+    scoring:
+      scale: 1-3
+      min-value: 1
+      max-value: 3
+      current-value: 3
+    criteria:
+      level-3:
+        score: 3
+        name: Defined
+        description: Designing systems for high availability with disaster recovery, failover mechanisms, and resilience patterns.
+        risk-level: Low
+  data-collection:
+    sources:
+      - Documentation review
+      - Technical interviews
+      - System analysis
+    tools:
+      - category: Assessment
+        tools:
+          - Questionnaires
+          - Code analysis
+          - Architecture review
+  business-context:
+    cost-impact:
+      level-3: Optimized costs
+    success-metrics:
+      - name: High availability design Score
+        target: ≥ 2.5
+  tags:
+    - ha
+    - reliability
+    - dr
+status:
+  assessment-status: active
+  last-assessed: '2025-09-17T02:06:28.382Z'
+  next-assessment: '2025-12-16T02:06:28.382Z'
+  current-score: 3
+  trend: stable
+  confidence-level: high

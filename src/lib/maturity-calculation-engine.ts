@@ -1,0 +1,1082 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export interface ScoringRuleConfig {
+  id: string;
+  name: string;
+  metricAnsweredValue: number;
+  metricUnansweredValue: number;
+  metricMaxLevel: number;
+  topicScoreMethod: string;
+  topicScaleMin: number;
+  topicScaleMax: number;
+  topicExcludeEmpty: boolean;
+  pillarScoreMethod: string;
+  pillarExcludeEmpty: boolean;
+  pillarMinTopics: number;
+  overallScoreMethod: string;
+  overallExcludeEmpty: boolean;
+  overallMinPillars: number;
+  roundingPrecision: number;
+  penalizeIncomplete: boolean;
+}
+
+export interface MaturityCalculationResult {
+  sessionId: string;
+  targetId: string;
+  scoringRuleId: string;
+  overallScore: number;
+  maturityLevel: string;
+  pillarScores: Record<string, {
+    score: number;
+    level: string;
+    weight: number;
+    topicCount: number;
+    answeredTopics: number;
+  }>;
+  topicScores: Record<string, {
+    score: number;
+    answered: number;
+    total: number;
+    weight: number;
+    pillarId: string;
+  }>;
+  metricScores: Record<string, {
+    score: number;
+    value: number | null;
+    level: number;
+    weight: number;
+    topicId: string;
+  }>;
+  calculationMetadata: {
+    calculatedAt: string;
+    ruleName: string;
+    totalMetrics: number;
+    answeredMetrics: number;
+    completionPercentage: number;
+    warnings: string[];
+  };
+}
+
+export class MaturityCalculationService {
+  
+  /**
+   * Calculate maturity scores for a completed assessment session
+   */
+  async calculateMaturityScores(sessionId: string): Promise<MaturityCalculationResult> {
+    console.log(`🧮 Starting maturity calculation for session: ${sessionId}`);
+    
+    // 1. Get assessment session with all related data
+    const session = await prisma.assessmentSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        target: true,
+        scoringRule: true,
+        assessmentResults: {
+          include: {
+            metric: {
+              include: {
+                topic: {
+                  include: {
+                    pillar: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!session) {
+      throw new Error(`Assessment session ${sessionId} not found`);
+    }
+
+    // 2. Get scoring rules (use session's rule or default)
+    let scoringRule = session.scoringRule;
+    if (!scoringRule) {
+      scoringRule = await prisma.scoringRules.findFirst({
+        where: { isDefault: true, isActive: true }
+      });
+      if (!scoringRule) {
+        throw new Error('No scoring rule configured and no default rule found');
+      }
+    }
+
+    console.log(`📏 Using scoring rule: ${scoringRule.name}`);
+
+    // 3. Get all pillars, topics, and metrics for complete structure
+    const allPillars = await prisma.maturityPillar.findMany({
+      where: { isActive: true },
+      include: {
+        topics: {
+          where: { isActive: true },
+          include: {
+            metrics: {
+              where: { active: true }
+            }
+          }
+        }
+      }
+    });
+
+    // 4. Organize assessment results by metric ID
+    const resultsMap = new Map<string, number>();
+    session.assessmentResults.forEach((result: any) => {
+      resultsMap.set(result.metricId, Number(result.value));
+    });
+
+    const warnings: string[] = [];
+    
+    // 5. Calculate Level 1: Metric Scores
+    const metricScores: Record<string, any> = {};
+    let totalMetrics = 0;
+    let answeredMetrics = 0;
+
+    for (const pillar of allPillars) {
+      for (const topic of pillar.topics) {
+        for (const metric of topic.metrics) {
+          totalMetrics++;
+          const hasAnswer = resultsMap.has(metric.id);
+          
+          if (hasAnswer) {
+            answeredMetrics++;
+            const rawValue = resultsMap.get(metric.id)!;
+            const normalizedScore = this.calculateMetricScore(
+              rawValue, 
+              metric.level, 
+              scoringRule
+            );
+            
+            metricScores[metric.id] = {
+              score: normalizedScore,
+              value: rawValue,
+              level: metric.level,
+              weight: Number(metric.weight),
+              topicId: topic.id
+            };
+          } else {
+            metricScores[metric.id] = {
+              score: scoringRule.metricUnansweredValue,
+              value: null,
+              level: metric.level,
+              weight: Number(metric.weight),
+              topicId: topic.id
+            };
+          }
+        }
+      }
+    }
+
+    console.log(`📊 Calculated ${Object.keys(metricScores).length} metric scores`);
+
+    // 6. Calculate Level 2: Topic Scores
+    const topicScores: Record<string, any> = {};
+    
+    for (const pillar of allPillars) {
+      for (const topic of pillar.topics) {
+        const topicMetrics = topic.metrics.map(m => metricScores[m.id]);
+        const answeredCount = topicMetrics.filter(m => m.value !== null).length;
+        
+        if (scoringRule.topicExcludeEmpty && answeredCount === 0) {
+          topicScores[topic.id] = {
+            score: 0,
+            answered: 0,
+            total: topicMetrics.length,
+            weight: Number(topic.weight),
+            pillarId: pillar.id
+          };
+          continue;
+        }
+        
+        const topicScore = this.calculateTopicScore(
+          topicMetrics,
+          scoringRule,
+          answeredCount > 0
+        );
+        
+        topicScores[topic.id] = {
+          score: topicScore,
+          answered: answeredCount,
+          total: topicMetrics.length,
+          weight: Number(topic.weight),
+          pillarId: pillar.id
+        };
+      }
+    }
+
+    console.log(`📋 Calculated ${Object.keys(topicScores).length} topic scores`);
+
+    // 7. Calculate Level 3: Pillar Scores
+    const pillarScores: Record<string, any> = {};
+    
+    for (const pillar of allPillars) {
+      const pillarTopics = pillar.topics.map(t => topicScores[t.id]);
+      const answeredTopics = pillarTopics.filter(t => t.answered > 0).length;
+      
+      if (scoringRule.pillarExcludeEmpty && answeredTopics === 0) {
+        pillarScores[pillar.id] = {
+          score: 0,
+          level: 'INITIAL',
+          weight: Number(pillar.weight),
+          topicCount: pillarTopics.length,
+          answeredTopics: 0
+        };
+        continue;
+      }
+      
+      if (answeredTopics < scoringRule.pillarMinTopics) {
+        warnings.push(`Pillar ${pillar.name} has ${answeredTopics} answered topics, minimum required: ${scoringRule.pillarMinTopics}`);
+      }
+      
+      const pillarScore = this.calculatePillarScore(
+        pillarTopics,
+        scoringRule,
+        answeredTopics >= scoringRule.pillarMinTopics
+      );
+      
+      pillarScores[pillar.id] = {
+        score: pillarScore,
+        level: this.getMaturityLevel(pillarScore),
+        weight: Number(pillar.weight),
+        topicCount: pillarTopics.length,
+        answeredTopics: answeredTopics
+      };
+    }
+
+    console.log(`🏛️ Calculated ${Object.keys(pillarScores).length} pillar scores`);
+
+    // 8. Calculate Level 4: Overall Score
+    const pillarValues = Object.values(pillarScores);
+    const answeredPillars = pillarValues.filter((p: any) => p.answeredTopics > 0).length;
+    
+    if (answeredPillars < scoringRule.overallMinPillars) {
+      warnings.push(`Only ${answeredPillars} pillars have answers, minimum required: ${scoringRule.overallMinPillars}`);
+    }
+    
+    const overallScore = this.calculateOverallScore(
+      pillarValues,
+      scoringRule,
+      answeredPillars >= scoringRule.overallMinPillars
+    );
+
+    const completionPercentage = (answeredMetrics / totalMetrics) * 100;
+
+    console.log(`🎯 Overall score: ${overallScore}, Completion: ${completionPercentage.toFixed(1)}%`);
+
+    const result: MaturityCalculationResult = {
+      sessionId: session.id,
+      targetId: session.targetId,
+      scoringRuleId: scoringRule.id,
+      overallScore: this.roundScore(overallScore, scoringRule.roundingPrecision),
+      maturityLevel: this.getMaturityLevel(overallScore),
+      pillarScores,
+      topicScores,
+      metricScores,
+      calculationMetadata: {
+        calculatedAt: new Date().toISOString(),
+        ruleName: scoringRule.name,
+        totalMetrics,
+        answeredMetrics,
+        completionPercentage,
+        warnings
+      }
+    };
+
+    return result;
+  }
+
+  /**
+   * Calculate individual metric score based on scoring rules
+   */
+  private calculateMetricScore(
+    rawValue: number, 
+    metricLevel: number, 
+    rules: ScoringRuleConfig
+  ): number {
+    if (rules.metricAnsweredValue === 1) {
+      // Use the actual level value
+      return metricLevel;
+    } else {
+      // Always use fixed value (typically 0)
+      return rules.metricAnsweredValue;
+    }
+  }
+
+  /**
+   * Calculate topic score from metric scores
+   */
+  private calculateTopicScore(
+    metricScores: any[],
+    rules: ScoringRuleConfig,
+    hasAnswers: boolean
+  ): number {
+    if (!hasAnswers && rules.topicExcludeEmpty) {
+      return 0;
+    }
+
+    const validScores = metricScores.filter(m => m.value !== null);
+    
+    if (validScores.length === 0) {
+      return 0;
+    }
+
+    let score = 0;
+    
+    switch (rules.topicScoreMethod) {
+      case 'AVERAGE':
+        score = validScores.reduce((sum, m) => sum + m.score, 0) / validScores.length;
+        break;
+        
+      case 'WEIGHTED_AVERAGE':
+        const totalWeight = validScores.reduce((sum, m) => sum + m.weight, 0);
+        const weightedSum = validScores.reduce((sum, m) => sum + (m.score * m.weight), 0);
+        score = totalWeight > 0 ? weightedSum / totalWeight : 0;
+        break;
+        
+      case 'PERCENTAGE_TO_SCALE':
+        const percentage = validScores.reduce((sum, m) => sum + m.score, 0) / metricScores.length;
+        const scale = rules.topicScaleMax - rules.topicScaleMin;
+        score = rules.topicScaleMin + (percentage * scale);
+        break;
+        
+      case 'SUM':
+        score = validScores.reduce((sum, m) => sum + m.score, 0);
+        break;
+        
+      case 'MIN':
+        score = Math.min(...validScores.map(m => m.score));
+        break;
+        
+      case 'MAX':
+        score = Math.max(...validScores.map(m => m.score));
+        break;
+        
+      case 'MEDIAN':
+        const sorted = validScores.map(m => m.score).sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        score = sorted.length % 2 === 0 
+          ? (sorted[mid - 1] + sorted[mid]) / 2 
+          : sorted[mid];
+        break;
+        
+      default:
+        score = validScores.reduce((sum, m) => sum + m.score, 0) / validScores.length;
+    }
+
+    return Math.max(0, Math.min(rules.topicScaleMax, score));
+  }
+
+  /**
+   * Calculate pillar score from topic scores
+   */
+  private calculatePillarScore(
+    topicScores: any[],
+    rules: ScoringRuleConfig,
+    meetsMinimum: boolean
+  ): number {
+    if (!meetsMinimum) {
+      return 0;
+    }
+
+    const validTopics = rules.pillarExcludeEmpty 
+      ? topicScores.filter(t => t.answered > 0)
+      : topicScores;
+    
+    if (validTopics.length === 0) {
+      return 0;
+    }
+
+    let score = 0;
+    
+    switch (rules.pillarScoreMethod) {
+      case 'AVERAGE':
+        score = validTopics.reduce((sum, t) => sum + t.score, 0) / validTopics.length;
+        break;
+        
+      case 'WEIGHTED_AVERAGE':
+        const totalWeight = validTopics.reduce((sum, t) => sum + t.weight, 0);
+        const weightedSum = validTopics.reduce((sum, t) => sum + (t.score * t.weight), 0);
+        score = totalWeight > 0 ? weightedSum / totalWeight : 0;
+        break;
+        
+      default:
+        score = validTopics.reduce((sum, t) => sum + t.score, 0) / validTopics.length;
+    }
+
+    return Math.max(0, score);
+  }
+
+  /**
+   * Calculate overall score from pillar scores
+   */
+  private calculateOverallScore(
+    pillarScores: any[],
+    rules: ScoringRuleConfig,
+    meetsMinimum: boolean
+  ): number {
+    if (!meetsMinimum) {
+      return 0;
+    }
+
+    const validPillars = rules.overallExcludeEmpty 
+      ? pillarScores.filter(p => p.answeredTopics > 0)
+      : pillarScores;
+    
+    if (validPillars.length === 0) {
+      return 0;
+    }
+
+    let score = 0;
+    
+    switch (rules.overallScoreMethod) {
+      case 'AVERAGE':
+        score = validPillars.reduce((sum, p) => sum + p.score, 0) / validPillars.length;
+        break;
+        
+      case 'WEIGHTED_AVERAGE':
+        const totalWeight = validPillars.reduce((sum, p) => sum + p.weight, 0);
+        const weightedSum = validPillars.reduce((sum, p) => sum + (p.score * p.weight), 0);
+        score = totalWeight > 0 ? weightedSum / totalWeight : 0;
+        break;
+        
+      default:
+        score = validPillars.reduce((sum, p) => sum + p.score, 0) / validPillars.length;
+    }
+
+    return Math.max(0, score);
+  }
+
+  /**
+   * Convert numerical score to maturity level
+   */
+  private getMaturityLevel(score: number): string {
+    if (score >= 4.0) return 'OPTIMIZING';
+    if (score >= 3.0) return 'DEFINED';
+    if (score >= 2.0) return 'MANAGED';
+    return 'INITIAL';
+  }
+
+  /**
+   * Round score to specified precision
+   */
+  private roundScore(score: number, precision: number): number {
+    const factor = Math.pow(10, precision);
+    return Math.round(score * factor) / factor;
+  }
+
+  /**
+   * Store calculated results in the database
+   */
+  async storeCalculationResults(result: MaturityCalculationResult): Promise<void> {
+    console.log(`💾 Storing calculation results for target: ${result.targetId}`);
+    
+    // Mark any existing results as not latest
+    await prisma.calculatedMaturityResult.updateMany({
+      where: { 
+        targetId: result.targetId,
+        isLatest: true 
+      },
+      data: { isLatest: false }
+    });
+
+    // Create new result record
+    await prisma.calculatedMaturityResult.create({
+      data: {
+        sessionId: result.sessionId,
+        targetId: result.targetId,
+        scoringRuleId: result.scoringRuleId,
+        overallScore: result.overallScore,
+        maturityLevel: result.maturityLevel,
+        pillarScores: result.pillarScores,
+        topicScores: result.topicScores,
+        metricScores: result.metricScores,
+        calculationMetadata: result.calculationMetadata,
+        isLatest: true
+      }
+    });
+
+    console.log(`✅ Successfully stored calculation results`);
+  }
+
+  /**
+   * Get latest maturity results for a target
+   */
+  async getLatestResults(targetId: string): Promise<MaturityCalculationResult | null> {
+    const result = await prisma.calculatedMaturityResult.findFirst({
+      where: { 
+        targetId,
+        isLatest: true 
+      },
+      include: {
+        session: true,
+        target: true,
+        scoringRule: true
+      }
+    });
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      sessionId: result.sessionId,
+      targetId: result.targetId,
+      scoringRuleId: result.scoringRuleId,
+      overallScore: Number(result.overallScore),
+      maturityLevel: result.maturityLevel,
+      pillarScores: result.pillarScores as any,
+      topicScores: result.topicScores as any,
+      metricScores: result.metricScores as any,
+      calculationMetadata: result.calculationMetadata as any
+    };
+  }
+
+  /**
+   * Recalculate and store results for a completed assessment
+   */
+  async processCompletedAssessment(sessionId: string): Promise<MaturityCalculationResult> {
+    console.log(`🔄 Processing completed assessment: ${sessionId}`);
+    
+    const result = await this.calculateMaturityScores(sessionId);
+    await this.storeCalculationResults(result);
+    
+    console.log(`🎉 Assessment processing complete`);
+    return result;
+  }
+}
+
+export const maturityCalculationService = new MaturityCalculationService();
+    assessmentVersion: string;
+    algorithmVersion: string;
+  };
+}
+
+export interface PillarScore {
+  id: string;
+  name: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  topicCount: number;
+  metricCount: number;
+  confidence: number;
+  reasons: string[];
+}
+
+export interface TopicScore {
+  id: string;
+  name: string;
+  pillarId: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  metricCount: number;
+  confidence: number;
+  reasons: string[];
+}
+
+export interface MetricScore {
+  id: string;
+  name: string;
+  topicId: string;
+  pillarId: string;
+  value: number;
+  level: number;
+  weight: number;
+  contribution: number;
+  confidence: number;
+  evidence: string[];
+  assessedAt: Date;
+  reasons: string[];
+}
+
+export interface CalculationExplanation {
+  summary: string;
+  decisions: Decision[];
+  assumptions: string[];
+  recommendations: string[];
+  riskFactors: string[];
+  improvementAreas: string[];
+}
+
+export interface Decision {
+  stage: 'metric' | 'topic' | 'pillar' | 'overall';
+  entityId: string;
+  entityName: string;
+  decision: string;
+  reasoning: string;
+  factors: string[];
+  impact: 'low' | 'medium' | 'high';
+  confidence: number;
+  timestamp: Date;
+}
+
+export class MaturityCalculationEngine {
+  private config: MaturityCalculationConfig;
+  private decisions: Decision[] = [];
+  private assumptions: string[] = [];
+
+  constructor(config: MaturityCalculationConfig) {
+    this.config = config;
+  }
+
+  /**
+   * Calculate maturity score for a target (Application, System, or Platform)
+   */
+  async calculateMaturity(
+    targetId: string,
+    targetType: 'APPLICATION' | 'SYSTEM' | 'PLATFORM',
+    assessmentData: any
+  ): Promise<MaturityScore> {
+    this.decisions = [];
+    this.assumptions = [];
+
+    const startTime = new Date();
+    
+    // Step 1: Calculate metric scores
+    const metricScores = await this.calculateMetricScores(assessmentData.metrics);
+    
+    // Step 2: Calculate topic scores from metrics
+    const topicScores = await this.calculateTopicScores(metricScores, assessmentData.topics);
+    
+    // Step 3: Calculate pillar scores from topics
+    const pillarScores = await this.calculatePillarScores(topicScores, assessmentData.pillars);
+    
+    // Step 4: Calculate overall score from pillars
+    const overallScore = await this.calculateOverallScore(pillarScores, targetType);
+    
+    // Step 5: Determine maturity level
+    const maturityLevel = this.determineMaturityLevel(overallScore);
+    
+    // Step 6: Calculate confidence
+    const confidence = this.calculateConfidence(metricScores, topicScores, pillarScores);
+    
+    // Step 7: Generate explanation
+    const explanation = this.generateExplanation(overallScore, pillarScores, targetType);
+
+    return {
+      overall: overallScore,
+      level: maturityLevel,
+      confidence,
+      breakdown: {
+        pillars: pillarScores,
+        topics: topicScores,
+        metrics: metricScores
+      },
+      explanation,
+      metadata: {
+        calculatedAt: startTime,
+        targetType,
+        targetId,
+        assessmentVersion: '1.0.0',
+        algorithmVersion: '1.0.0'
+      }
+    };
+  }
+
+  /**
+   * Calculate individual metric scores with normalization and weighting
+   */
+  private async calculateMetricScores(metrics: any[]): Promise<MetricScore[]> {
+    return metrics.map(metric => {
+      const rawScore = metric.value;
+      const levelMultiplier = this.config.parameters.levelMultipliers[metric.level] || 1.0;
+      const weight = this.config.weights.metric[metric.id] || metric.weight || 1.0;
+      
+      // Normalize score to 0-3 scale based on level
+      let normalizedScore = rawScore;
+      if (metric.level === 1 && rawScore > 1) normalizedScore = Math.min(rawScore, 1.5);
+      if (metric.level === 2 && rawScore > 2) normalizedScore = Math.min(rawScore, 2.5);
+      if (metric.level === 3) normalizedScore = Math.min(rawScore, 3);
+      
+      const adjustedScore = normalizedScore * levelMultiplier;
+      const confidence = this.calculateMetricConfidence(metric);
+      
+      // Record decision
+      this.recordDecision({
+        stage: 'metric',
+        entityId: metric.id,
+        entityName: metric.name,
+        decision: `Score: ${adjustedScore.toFixed(2)}`,
+        reasoning: `Raw score ${rawScore} × level multiplier ${levelMultiplier} = ${adjustedScore.toFixed(2)}`,
+        factors: [
+          `Metric level: ${metric.level}`,
+          `Weight: ${weight}`,
+          `Evidence quality: ${metric.evidence?.length || 0} items`
+        ],
+        impact: weight > 1.2 ? 'high' : weight > 0.8 ? 'medium' : 'low',
+        confidence,
+        timestamp: new Date()
+      });
+
+      return {
+        id: metric.id,
+        name: metric.name,
+        topicId: metric.topicId,
+        pillarId: metric.pillarId,
+        value: adjustedScore,
+        level: metric.level,
+        weight,
+        contribution: adjustedScore * weight,
+        confidence,
+        evidence: metric.evidence || [],
+        assessedAt: new Date(metric.assessedAt || Date.now()),
+        reasons: [
+          `Level ${metric.level} metric with multiplier ${levelMultiplier}`,
+          `Applied weight of ${weight}`,
+          `Confidence: ${confidence.toFixed(2)} based on evidence quality`
+        ]
+      };
+    });
+  }
+
+  /**
+   * Calculate topic scores from aggregated metric scores
+   */
+  private async calculateTopicScores(metricScores: MetricScore[], topics: any[]): Promise<TopicScore[]> {
+    return topics.map(topic => {
+      const topicMetrics = metricScores.filter(m => m.topicId === topic.id);
+      
+      if (topicMetrics.length === 0) {
+        this.assumptions.push(`Topic ${topic.name} has no metrics - using default score of 1.0`);
+        return this.createDefaultTopicScore(topic);
+      }
+
+      // Calculate weighted average
+      const totalWeightedScore = topicMetrics.reduce((sum, metric) => sum + metric.contribution, 0);
+      const totalWeight = topicMetrics.reduce((sum, metric) => sum + metric.weight, 0);
+      const averageScore = totalWeightedScore / totalWeight;
+      
+      const topicWeight = this.config.weights.topic[topic.id] || topic.weight || 1.0;
+      const confidence = this.calculateTopicConfidence(topicMetrics);
+      
+      // Record decision
+      this.recordDecision({
+        stage: 'topic',
+        entityId: topic.id,
+        entityName: topic.name,
+        decision: `Score: ${averageScore.toFixed(2)}`,
+        reasoning: `Weighted average of ${topicMetrics.length} metrics: ${totalWeightedScore.toFixed(2)} / ${totalWeight.toFixed(2)}`,
+        factors: [
+          `${topicMetrics.length} metrics included`,
+          `Topic weight: ${topicWeight}`,
+          `Highest metric: ${Math.max(...topicMetrics.map(m => m.value)).toFixed(2)}`,
+          `Lowest metric: ${Math.min(...topicMetrics.map(m => m.value)).toFixed(2)}`
+        ],
+        impact: topicWeight > 1.2 ? 'high' : 'medium',
+        confidence,
+        timestamp: new Date()
+      });
+
+      return {
+        id: topic.id,
+        name: topic.name,
+        pillarId: topic.pillarId,
+        score: averageScore,
+        weight: topicWeight,
+        contribution: averageScore * topicWeight,
+        metricCount: topicMetrics.length,
+        confidence,
+        reasons: [
+          `Calculated from ${topicMetrics.length} metrics`,
+          `Weighted average: ${averageScore.toFixed(2)}`,
+          `Topic weight applied: ${topicWeight}`
+        ]
+      };
+    });
+  }
+
+  /**
+   * Calculate pillar scores from aggregated topic scores
+   */
+  private async calculatePillarScores(topicScores: TopicScore[], pillars: any[]): Promise<PillarScore[]> {
+    return pillars.map(pillar => {
+      const pillarTopics = topicScores.filter(t => t.pillarId === pillar.id);
+      
+      if (pillarTopics.length === 0) {
+        this.assumptions.push(`Pillar ${pillar.name} has no topics - using default score of 1.0`);
+        return this.createDefaultPillarScore(pillar);
+      }
+
+      // Calculate weighted average
+      const totalWeightedScore = pillarTopics.reduce((sum, topic) => sum + topic.contribution, 0);
+      const totalWeight = pillarTopics.reduce((sum, topic) => sum + topic.weight, 0);
+      const averageScore = totalWeightedScore / totalWeight;
+      
+      const pillarWeight = this.config.weights.pillar[pillar.id] || pillar.weight || 1.0;
+      const confidence = this.calculatePillarConfidence(pillarTopics);
+      
+      const totalMetrics = pillarTopics.reduce((sum, topic) => sum + topic.metricCount, 0);
+      
+      // Record decision
+      this.recordDecision({
+        stage: 'pillar',
+        entityId: pillar.id,
+        entityName: pillar.name,
+        decision: `Score: ${averageScore.toFixed(2)}`,
+        reasoning: `Weighted average of ${pillarTopics.length} topics: ${totalWeightedScore.toFixed(2)} / ${totalWeight.toFixed(2)}`,
+        factors: [
+          `${pillarTopics.length} topics included`,
+          `${totalMetrics} total metrics`,
+          `Pillar weight: ${pillarWeight}`,
+          `Strategic importance: ${pillar.strategicImportance || 'medium'}`
+        ],
+        impact: pillarWeight > 1.2 ? 'high' : 'medium',
+        confidence,
+        timestamp: new Date()
+      });
+
+      return {
+        id: pillar.id,
+        name: pillar.name,
+        score: averageScore,
+        weight: pillarWeight,
+        contribution: averageScore * pillarWeight,
+        topicCount: pillarTopics.length,
+        metricCount: totalMetrics,
+        confidence,
+        reasons: [
+          `Calculated from ${pillarTopics.length} topics`,
+          `Total metrics: ${totalMetrics}`,
+          `Weighted average: ${averageScore.toFixed(2)}`,
+          `Pillar weight applied: ${pillarWeight}`
+        ]
+      };
+    });
+  }
+
+  /**
+   * Calculate overall maturity score from pillar scores
+   */
+  private async calculateOverallScore(
+    pillarScores: PillarScore[], 
+    targetType: 'APPLICATION' | 'SYSTEM' | 'PLATFORM'
+  ): Promise<number> {
+    const totalWeightedScore = pillarScores.reduce((sum, pillar) => sum + pillar.contribution, 0);
+    const totalWeight = pillarScores.reduce((sum, pillar) => sum + pillar.weight, 0);
+    const baseScore = totalWeightedScore / totalWeight;
+    
+    // Apply target type complexity factor
+    const complexityFactor = this.config.targetTypeFactors[targetType];
+    const adjustedScore = baseScore * complexityFactor;
+    
+    // Ensure score stays within bounds (0-3)
+    const finalScore = Math.min(Math.max(adjustedScore, 0), 3);
+    
+    // Record decision
+    this.recordDecision({
+      stage: 'overall',
+      entityId: 'overall',
+      entityName: 'Overall Maturity',
+      decision: `Final Score: ${finalScore.toFixed(2)}`,
+      reasoning: `Base score ${baseScore.toFixed(2)} × complexity factor ${complexityFactor} = ${finalScore.toFixed(2)}`,
+      factors: [
+        `${pillarScores.length} pillars included`,
+        `Target type: ${targetType}`,
+        `Complexity factor: ${complexityFactor}`,
+        `Score bounded to 0-3 range`
+      ],
+      impact: 'high',
+      confidence: this.calculateOverallConfidence(pillarScores),
+      timestamp: new Date()
+    });
+
+    return finalScore;
+  }
+
+  // Helper methods for confidence calculations
+  private calculateMetricConfidence(metric: any): number {
+    let confidence = 0.7; // Base confidence
+    
+    if (metric.evidence && metric.evidence.length > 0) confidence += 0.15;
+    if (metric.assessedAt && this.isRecentAssessment(metric.assessedAt)) confidence += 0.1;
+    if (metric.notes && metric.notes.length > 10) confidence += 0.05;
+    
+    return Math.min(confidence, 1.0);
+  }
+
+  private calculateTopicConfidence(metrics: MetricScore[]): number {
+    if (metrics.length === 0) return 0.3;
+    
+    const avgMetricConfidence = metrics.reduce((sum, m) => sum + m.confidence, 0) / metrics.length;
+    const completeness = Math.min(metrics.length / 3, 1); // Assume 3 metrics per topic is ideal
+    
+    return (avgMetricConfidence * 0.7) + (completeness * 0.3);
+  }
+
+  private calculatePillarConfidence(topics: TopicScore[]): number {
+    if (topics.length === 0) return 0.3;
+    
+    const avgTopicConfidence = topics.reduce((sum, t) => sum + t.confidence, 0) / topics.length;
+    const completeness = Math.min(topics.length / 4, 1); // Assume 4 topics per pillar is ideal
+    
+    return (avgTopicConfidence * 0.8) + (completeness * 0.2);
+  }
+
+  private calculateOverallConfidence(pillars: PillarScore[]): number {
+    if (pillars.length === 0) return 0.3;
+    
+    const avgPillarConfidence = pillars.reduce((sum, p) => sum + p.confidence, 0) / pillars.length;
+    const completeness = Math.min(pillars.length / 5, 1); // Assume 5 pillars is complete
+    
+    return (avgPillarConfidence * 0.9) + (completeness * 0.1);
+  }
+
+  // Helper methods
+  private determineMaturityLevel(score: number): 'Initial' | 'Managed' | 'Defined' | 'Optimizing' {
+    if (score >= 2.7) return 'Optimizing';
+    if (score >= 2.0) return 'Defined';
+    if (score >= 1.3) return 'Managed';
+    return 'Initial';
+  }
+
+  private isRecentAssessment(assessedAt: string | Date): boolean {
+    const date = new Date(assessedAt);
+    const monthsOld = (Date.now() - date.getTime()) / (1000 * 60 * 60 * 24 * 30);
+    return monthsOld <= 3; // Within 3 months
+  }
+
+  private recordDecision(decision: Decision): void {
+    this.decisions.push(decision);
+  }
+
+  private createDefaultTopicScore(topic: any): TopicScore {
+    return {
+      id: topic.id,
+      name: topic.name,
+      pillarId: topic.pillarId,
+      score: 1.0,
+      weight: 1.0,
+      contribution: 1.0,
+      metricCount: 0,
+      confidence: 0.3,
+      reasons: ['No metrics available - using default score']
+    };
+  }
+
+  private createDefaultPillarScore(pillar: any): PillarScore {
+    return {
+      id: pillar.id,
+      name: pillar.name,
+      score: 1.0,
+      weight: 1.0,
+      contribution: 1.0,
+      topicCount: 0,
+      metricCount: 0,
+      confidence: 0.3,
+      reasons: ['No topics available - using default score']
+    };
+  }
+
+  private calculateConfidence(
+    metricScores: MetricScore[], 
+    topicScores: TopicScore[], 
+    pillarScores: PillarScore[]
+  ): number {
+    const metricConfidence = metricScores.length > 0 
+      ? metricScores.reduce((sum, m) => sum + m.confidence, 0) / metricScores.length 
+      : 0.3;
+    
+    const topicConfidence = topicScores.length > 0
+      ? topicScores.reduce((sum, t) => sum + t.confidence, 0) / topicScores.length
+      : 0.3;
+    
+    const pillarConfidence = pillarScores.length > 0
+      ? pillarScores.reduce((sum, p) => sum + p.confidence, 0) / pillarScores.length
+      : 0.3;
+    
+    return (metricConfidence * 0.5) + (topicConfidence * 0.3) + (pillarConfidence * 0.2);
+  }
+
+  private generateExplanation(
+    overallScore: number, 
+    pillarScores: PillarScore[], 
+    targetType: string
+  ): CalculationExplanation {
+    const level = this.determineMaturityLevel(overallScore);
+    
+    // Generate summary
+    const summary = `${targetType} maturity score: ${overallScore.toFixed(2)}/3.0 (${level} level). ` +
+      `Calculated from ${pillarScores.length} pillars with ${this.decisions.length} decision points.`;
+
+    // Identify top and bottom performers
+    const sortedPillars = [...pillarScores].sort((a, b) => b.score - a.score);
+    const topPillar = sortedPillars[0];
+    const bottomPillar = sortedPillars[sortedPillars.length - 1];
+
+    // Generate recommendations
+    const recommendations = [
+      `Focus on improving ${bottomPillar.name} (score: ${bottomPillar.score.toFixed(2)})`,
+      `Leverage strengths in ${topPillar.name} (score: ${topPillar.score.toFixed(2)})`,
+      level === 'Initial' ? 'Establish basic processes and documentation' :
+      level === 'Managed' ? 'Implement automation and standardization' :
+      level === 'Defined' ? 'Focus on optimization and continuous improvement' :
+      'Maintain excellence and drive innovation'
+    ];
+
+    // Identify risk factors
+    const riskFactors = [];
+    if (overallScore < 1.5) riskFactors.push('Low overall maturity may impact reliability and security');
+    if (bottomPillar.score < 1.2) riskFactors.push(`Critical gap in ${bottomPillar.name}`);
+    
+    const lowConfidenceItems = this.decisions.filter(d => d.confidence < 0.6);
+    if (lowConfidenceItems.length > 0) {
+      riskFactors.push(`${lowConfidenceItems.length} assessment items have low confidence`);
+    }
+
+    // Improvement areas
+    const improvementAreas = pillarScores
+      .filter(p => p.score < 2.0)
+      .map(p => `${p.name}: Increase from ${p.score.toFixed(2)} to at least 2.0`)
+      .slice(0, 3); // Top 3 improvement areas
+
+    return {
+      summary,
+      decisions: this.decisions,
+      assumptions: this.assumptions,
+      recommendations,
+      riskFactors,
+      improvementAreas
+    };
+  }
+}
+
+// Default configuration
+export const defaultCalculationConfig: MaturityCalculationConfig = {
+  weights: {
+    pillar: {
+      'operational-excellence': 1.2,
+      'security': 1.3,
+      'reliability': 1.2,
+      'performance-efficiency': 1.0,
+      'cost-optimization': 0.8
+    },
+    topic: {}, // Will be populated from database
+    metric: {} // Will be populated from database
+  },
+  parameters: {
+    levelMultipliers: {
+      1: 0.33, // Initial level
+      2: 0.66, // Managed level  
+      3: 1.0   // Defined level
+    },
+    qualityThresholds: {
+      excellent: 2.5,
+      good: 2.0,
+      fair: 1.5,
+      poor: 1.0
+    },
+    confidenceFactors: {
+      dataQuality: 0.9,
+      assessmentRecency: 0.85,
+      evidenceStrength: 0.8
+    }
+  },
+  targetTypeFactors: {
+    APPLICATION: 1.0,
+    SYSTEM: 1.15,
+    PLATFORM: 1.3
+  }
+};
