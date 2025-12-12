@@ -82,6 +82,36 @@ A comprehensive full-stack application for evaluating enterprise architecture ma
 - ✅ **Audit Trail & Compliance** - Complete tracking of all assessment activities
 - ✅ **Multi-tenant Support** - Organization-based isolation
 - ✅ **Role-based Access Control** - Admin, Assessor, and Viewer roles
+- ✅ **AWS Bedrock AI Integration** - Claude 3.5 Sonnet for contextual metric guidance
+- ✅ **LLM-Powered Multi-Agent System** - Three specialized AI agents with intelligent reasoning
+- ✅ **AI-Powered Assessment Interviews** - Conversational assessment completion via AI interviewer
+
+### AI Features 🤖 **NEW: LLM-Powered!**
+
+#### 🎤 **AI Assessment Interviewer** (NEW!)
+
+- **Conversational Assessments** - Complete assessments through natural dialogue
+- **Standalone Interview Page** - Dedicated `/ai-interview` interface with assessment selection
+- **Natural Language Parsing** - Understands responses like "Level 2" or "We're at managed"
+- **Guided Experience** - AI asks questions one at a time with context and examples
+- **Progress Tracking** - Real-time completion status and milestones
+- **Quick Start:** See `AI_INTERVIEWER_QUICKSTART.md` | **Full Docs:** See `AI_INTERVIEWER_DOCUMENTATION.md`
+
+#### 🧠 **Two-Agent Analysis System**
+
+- **LLM-Based Agent Coordination** - Claude 3.5 Sonnet intelligently routes requests and reasons about user intent
+- **🤖 Assessment Coach Agent** - Guides users through assessments, explains metrics, provides examples
+- **📊 Scoring Analyst Agent** - Analyzes results, identifies weak areas, generates recommendations
+- **💬 Natural Language Understanding** - Talk to agents naturally, no commands needed
+- **🔧 Tool Calling System** - Claude automatically decides which tools to use for complex questions
+- **🎯 Context-Aware Responses** - Maintains conversation history and provides personalized guidance
+- **Quick Start:** See `LLM_AGENT_QUICKSTART.md` | **Full Docs:** See `LLM_AGENT_DOCUMENTATION.md`
+
+#### ✨ **Bedrock Integration**
+
+- Metric-specific AI help using Claude 3.5 Sonnet
+- Knowledge Base support for domain expertise
+- Direct API and AWS SDK dual-mode support
 
 ### Assessment Categories
 

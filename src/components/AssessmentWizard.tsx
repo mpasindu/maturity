@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Save, CheckCircle, Circle, FileText, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, CheckCircle, Circle, FileText, Upload, MessageCircle, Bot, ClipboardList } from 'lucide-react';
 import { AssessmentFormData, WizardStep, AssessmentProgress, MetricType } from '@/types/assessment';
+import AssessmentChat from './AssessmentChat';
+import AgentChat from './AgentChat';
+import InterviewerChat from './InterviewerChat';
 
 interface AssessmentWizardProps {
   sessionId: string;
@@ -23,6 +26,10 @@ export function AssessmentWizard({
   const [formData, setFormData] = useState<AssessmentFormData>(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+  const [showChat, setShowChat] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<any>(null);
+  const [showAgentChat, setShowAgentChat] = useState(false); // Agent Chat state
+  const [showInterviewerChat, setShowInterviewerChat] = useState(false); // NEW: Interviewer Chat state
 
   // Transform pillars into wizard steps
   const wizardSteps: WizardStep[] = pillars.map((pillar) => ({
@@ -311,6 +318,26 @@ export function AssessmentWizard({
             Enterprise Architecture Assessment
           </h2>
           <div className="flex items-center space-x-4">
+            {/* AI Interview Agent Button - NEW! */}
+            <button
+              onClick={() => setShowInterviewerChat(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg"
+              title="Start AI Interview"
+            >
+              <ClipboardList className="h-5 w-5" />
+              <span className="hidden sm:inline font-medium">AI Interview</span>
+            </button>
+
+            {/* Talk to Agent Button */}
+            <button
+              onClick={() => setShowAgentChat(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:via-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg"
+              title="Talk to AI Agent"
+            >
+              <Bot className="h-5 w-5" />
+              <span className="hidden sm:inline font-medium">Talk to Agent</span>
+            </button>
+            
             {isLoading && (
               <div className="flex items-center text-sm text-gray-600">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
@@ -412,31 +439,46 @@ export function AssessmentWizard({
                             'border-green-200'
                           }`}>
                             <div className="flex items-start justify-between mb-2">
-                              <label className="text-sm font-medium text-gray-900">
-                                {metric.name}
-                                {metric.weight !== 1.0 && (
-                                  <span className="ml-2 text-xs text-gray-500">
-                                    (Weight: {metric.weight})
-                                  </span>
-                                )}
-                              </label>
-                              {metric.tags && metric.tags.length > 0 && (
-                                <div className="flex flex-wrap gap-1 ml-2">
-                                  {metric.tags.slice(0, 3).map((tag: string, index: number) => (
-                                    <span
-                                      key={index}
-                                      className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))}
-                                  {metric.tags.length > 3 && (
-                                    <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                      +{metric.tags.length - 3}
+                              <div className="flex-1">
+                                <label className="text-sm font-medium text-gray-900">
+                                  {metric.name}
+                                  {metric.weight !== 1.0 && (
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      (Weight: {metric.weight})
                                     </span>
                                   )}
-                                </div>
-                              )}
+                                </label>
+                              </div>
+                              <div className="flex items-center space-x-2 ml-4">
+                                {metric.tags && metric.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1">
+                                    {metric.tags.slice(0, 3).map((tag: string, index: number) => (
+                                      <span
+                                        key={index}
+                                        className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                    {metric.tags.length > 3 && (
+                                      <span className="inline-block px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
+                                        +{metric.tags.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setSelectedMetric(metric);
+                                    setShowChat(true);
+                                  }}
+                                  className="flex items-center space-x-1 px-3 py-1.5 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md"
+                                  title="Ask AI Assistant"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                  <span className="hidden sm:inline">AI Help</span>
+                                </button>
+                              </div>
                             </div>
                             
                             {metric.description && (
@@ -524,6 +566,45 @@ export function AssessmentWizard({
           )}
         </div>
       </div>
+
+      {/* AI Chat Modal - Existing metric-specific help */}
+      {showChat && selectedMetric && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-3xl h-[700px] animate-fade-in">
+            <AssessmentChat
+              metricId={selectedMetric.id}
+              sessionId={sessionId}
+              metricName={selectedMetric.name}
+              projectInfo={formData[selectedMetric.id]?.notes || ''}
+              onClose={() => {
+                setShowChat(false);
+                setSelectedMetric(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Agent Chat Modal - General assessment coaching */}
+      {showAgentChat && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl h-[700px] animate-fade-in">
+            <AgentChat
+              sessionId={sessionId}
+              targetName={pillars[0]?.name || 'Assessment'}
+              onClose={() => setShowAgentChat(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Interviewer Chat Modal - Interactive assessment */}
+      {showInterviewerChat && (
+        <InterviewerChat
+          sessionId={sessionId}
+          onClose={() => setShowInterviewerChat(false)}
+        />
+      )}
     </div>
   );
 }

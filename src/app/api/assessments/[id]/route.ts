@@ -154,26 +154,43 @@ export async function PUT(
     if (responses && typeof responses === 'object' && Object.keys(responses).length > 0) {
       console.log('PUT Assessment - Saving responses:', Object.keys(responses).length, 'metrics');
       
-      // Delete existing results for this session
-      await prisma.assessmentResult.deleteMany({
-        where: { sessionId: id }
-      });
-
-      // Insert new results from responses object
+      // Upsert results for each metric (update if exists, create if not)
       for (const [metricId, responseData] of Object.entries(responses)) {
         const response = responseData as any;
         console.log(`PUT Assessment - Saving metric ${metricId}:`, response);
         
-        await prisma.assessmentResult.create({
-          data: {
+        // Check if result exists
+        const existingResult = await prisma.assessmentResult.findFirst({
+          where: {
             sessionId: id,
             metricId: metricId,
-            value: response.value?.toString() || '0',
-            notes: response.notes || null,
-            evidenceUrls: response.evidenceUrls || [],
-            assessedAt: new Date()
-          }
+          },
         });
+
+        if (existingResult) {
+          // Update existing
+          await prisma.assessmentResult.update({
+            where: { id: existingResult.id },
+            data: {
+              value: response.value?.toString() || '0',
+              notes: response.notes || null,
+              evidenceUrls: response.evidenceUrls || [],
+              assessedAt: new Date()
+            }
+          });
+        } else {
+          // Create new
+          await prisma.assessmentResult.create({
+            data: {
+              sessionId: id,
+              metricId: metricId,
+              value: response.value?.toString() || '0',
+              notes: response.notes || null,
+              evidenceUrls: response.evidenceUrls || [],
+              assessedAt: new Date()
+            }
+          });
+        }
       }
     }
 

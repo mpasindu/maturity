@@ -37,6 +37,10 @@ model MaturityPillar {
 
   topics            AssessmentTopic[]
   assessmentSessions AssessmentSession[]
+  
+  // Bedrock relations
+  bedrockMessages        BedrockMessage[]
+  bedrockRecommendations BedrockRecommendation[]
 
   @@map("maturity_pillars")
 }
@@ -54,6 +58,10 @@ model AssessmentTopic {
 
   pillar  MaturityPillar @relation(fields: [pillarId], references: [id])
   metrics Metric[]
+  
+  // Bedrock relations
+  bedrockMessages        BedrockMessage[]
+  bedrockRecommendations BedrockRecommendation[]
 
   @@map("assessment_topics")
 }
@@ -76,6 +84,11 @@ model Metric {
 
   topic             AssessmentTopic   @relation(fields: [topicId], references: [id])
   assessmentResults AssessmentResult[]
+  
+  // Bedrock relations
+  bedrockMessages           BedrockMessage[]
+  bedrockRecommendations    BedrockRecommendation[]
+  bedrockEvidenceAnalyses   BedrockEvidenceAnalysis[]
 
   @@map("metrics")
 }
@@ -130,6 +143,11 @@ model AssessmentSession {
   assessmentResults AssessmentResult[]
   auditLogs         AuditLog[]
   maturityCalculations MaturityCalculation[]
+  
+  // Bedrock relations
+  bedrockConversations  BedrockConversation[]
+  bedrockRecommendations BedrockRecommendation[]
+  bedrockEvidenceAnalyses BedrockEvidenceAnalysis[]
 
   @@map("assessment_sessions")
 }
@@ -146,6 +164,7 @@ model AssessmentResult {
   session AssessmentSession @relation(fields: [sessionId], references: [id])
   metric  Metric            @relation(fields: [metricId], references: [id])
 
+  @@unique([sessionId, metricId], name: "sessionId_metricId")
   @@map("assessment_results")
 }
 
@@ -394,4 +413,230 @@ enum ConfigType {
   LEVEL_MULTIPLIER
   TARGET_FACTOR
   THRESHOLD
+}
+
+// ============================================================================
+// AWS BEDROCK AGENT INTEGRATION MODELS
+// ============================================================================
+
+model BedrockConversation {
+  id                  String   @id @default(uuid())
+  sessionId           String
+  userId              String
+  bedrockSessionId    String?  @unique
+  contextSnapshot     Json?
+  startedAt           DateTime @default(now())
+  lastInteractionAt   DateTime @default(now())
+  endedAt             DateTime?
+  status              BedrockConversationStatus @default(ACTIVE)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  session             AssessmentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messages            BedrockMessage[]
+  recommendations     BedrockRecommendation[]
+  evidenceAnalyses    BedrockEvidenceAnalysis[]
+  
+  @@unique([sessionId, bedrockSessionId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([status])
+  @@index([lastInteractionAt])
+  @@map("bedrock_conversations")
+}
+
+model BedrockMessage {
+  id                String   @id @default(uuid())
+  conversationId    String
+  role              BedrockMessageRole
+  content           String
+  messageType       BedrockMessageType?
+  metadata          Json?
+  tokensUsed        Int?
+  modelId           String?
+  metricId          String?
+  topicId           String?
+  pillarId          String?
+  createdAt         DateTime @default(now())
+  
+  conversation      BedrockConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  metric            Metric?             @relation(fields: [metricId], references: [id])
+  topic             AssessmentTopic?    @relation(fields: [topicId], references: [id])
+  pillar            MaturityPillar?     @relation(fields: [pillarId], references: [id])
+  
+  @@index([conversationId])
+  @@index([role])
+  @@index([messageType])
+  @@index([metricId])
+  @@index([createdAt])
+  @@map("bedrock_messages")
+}
+
+model BedrockRecommendation {
+  id                    String   @id @default(uuid())
+  conversationId        String?
+  sessionId             String
+  recommendationType    BedrockRecommendationType
+  title                 String
+  description           String
+  metricId              String?
+  topicId               String?
+  pillarId              String?
+  confidenceScore       Decimal? @db.Decimal(3, 2)
+  priority              RecommendationPriority?
+  impactEstimate        String?
+  supportingCitations   Json?
+  relatedMetrics        String[]
+  userFeedback          UserFeedback?
+  feedbackNotes         String?
+  appliedAt             DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  conversation          BedrockConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  session               AssessmentSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  metric                Metric?              @relation(fields: [metricId], references: [id])
+  topic                 AssessmentTopic?     @relation(fields: [topicId], references: [id])
+  pillar                MaturityPillar?      @relation(fields: [pillarId], references: [id])
+  
+  @@index([sessionId])
+  @@index([recommendationType])
+  @@index([metricId])
+  @@index([priority])
+  @@index([confidenceScore])
+  @@map("bedrock_recommendations")
+}
+
+model BedrockEvidenceAnalysis {
+  id                        String   @id @default(uuid())
+  conversationId            String?
+  sessionId                 String
+  metricId                  String
+  evidenceText              String
+  evidenceUrls              String[]
+  evidenceType              EvidenceType?
+  analysisSummary           String
+  maturityLevelSuggestion   Int?
+  confidenceScore           Decimal? @db.Decimal(3, 2)
+  strengths                 Json?
+  gaps                      Json?
+  alignmentScore            Decimal? @db.Decimal(3, 2)
+  criteriaMatched           Json?
+  bestPracticesReferenced   Json?
+  userAccepted              Boolean?
+  userNotes                 String?
+  finalScoreAssigned        Int?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  
+  conversation              BedrockConversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  session                   AssessmentSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  metric                    Metric               @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  
+  @@index([sessionId])
+  @@index([metricId])
+  @@index([confidenceScore])
+  @@index([maturityLevelSuggestion])
+  @@index([userAccepted])
+  @@map("bedrock_evidence_analysis")
+}
+
+model BedrockKnowledgeSync {
+  id                      String   @id @default(uuid())
+  syncType                KnowledgeSyncType
+  status                  SyncStatus
+  s3Bucket                String?
+  s3Prefix                String?
+  knowledgeBaseId         String?
+  dataSourceId            String?
+  itemsSynced             Int      @default(0)
+  metricsCount            Int      @default(0)
+  topicsCount             Int      @default(0)
+  pillarsCount            Int      @default(0)
+  bedrockIngestionJobId   String?
+  syncMetadata            Json?
+  errorMessage            String?
+  startedAt               DateTime @default(now())
+  completedAt             DateTime?
+  createdAt               DateTime @default(now())
+  
+  @@index([status])
+  @@index([syncType])
+  @@index([startedAt])
+  @@map("bedrock_knowledge_sync")
+}
+
+// ============================================================================
+// BEDROCK ENUMS
+// ============================================================================
+
+enum BedrockConversationStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum BedrockMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum BedrockMessageType {
+  QUESTION
+  ANSWER
+  RECOMMENDATION
+  CLARIFICATION
+  EVIDENCE_ANALYSIS
+  CALCULATION_EXPLANATION
+  BEST_PRACTICE
+  CONTEXT_UPDATE
+}
+
+enum BedrockRecommendationType {
+  METRIC_SUGGESTION
+  EVIDENCE_SUGGESTION
+  SCORE_GUIDANCE
+  BEST_PRACTICE
+  IMPROVEMENT_PATH
+  RISK_MITIGATION
+  QUICK_WIN
+}
+
+enum RecommendationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum UserFeedback {
+  HELPFUL
+  NOT_HELPFUL
+  APPLIED
+}
+
+enum EvidenceType {
+  DOCUMENT
+  SCREENSHOT
+  CODE_SAMPLE
+  CONFIGURATION
+  METRICS_DATA
+  INCIDENT_REPORT
+  OTHER
+}
+
+enum KnowledgeSyncType {
+  FULL
+  INCREMENTAL
+  METRIC
+  TOPIC
+  PILLAR
+}
+
+enum SyncStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
 }
