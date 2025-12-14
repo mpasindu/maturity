@@ -13,7 +13,14 @@ const MODEL_ID = process.env.BEDROCK_MODEL_ID || 'us.anthropic.claude-3-5-sonnet
 
 export interface LLMAgentMessage {
   role: 'user' | 'assistant';
-  content: string;
+  content: string | Array<{
+    type: string;
+    tool_use_id?: string;
+    content?: string;
+    id?: string;
+    name?: string;
+    input?: any;
+  }>;
 }
 
 export interface AgentContext {

@@ -81,8 +81,9 @@ export async function GET(
       const topicScores = pillar.topics.map((topic: any) => {
         const metricScores = topic.metrics.map((metric: any) => {
           const result = assessmentResults.find((r: any) => r.metricId === metric.id);
+          const value = result?.value ? Number(result.value) : 0;
           return calculator.calculateMetricScore(
-            result?.value || null,
+            value,
             metric.metricType,
             metric.weight,
             metric.minValue,
@@ -103,8 +104,9 @@ export async function GET(
       const topicScores = pillar.topics.map((topic: any, topicIndex: number) => {
         const metricScores = topic.metrics.map((metric: any) => {
           const result = assessmentResults.find((r: any) => r.metricId === metric.id);
+          const value = result?.value ? Number(result.value) : 0;
           return calculator.calculateMetricScore(
-            result?.value || null,
+            value,
             metric.metricType,
             metric.weight,
             metric.minValue,

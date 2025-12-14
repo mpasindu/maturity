@@ -14,3 +14,4 @@ dist/
 AWS_DEPLOYMENT_STATUS.md
 aws-credentials.json
 *-credentials.json
+deploy-with-creds.sh

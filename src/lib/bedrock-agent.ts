@@ -182,7 +182,7 @@ export class BedrockAgentService {
       });
 
       // Update context if provided
-      let currentContext = conversation.contextSnapshot as ConversationContext;
+      let currentContext = (conversation.contextSnapshot || {}) as unknown as ConversationContext;
       if (context) {
         currentContext = { ...currentContext, ...context };
         await prisma.bedrockConversation.update({
@@ -195,7 +195,7 @@ export class BedrockAgentService {
       const response = await this.invokeAgent(
         conversationHistory,
         currentContext,
-        conversation.bedrockSessionId
+        conversation.bedrockSessionId ?? undefined
       );
 
       // Store assistant response
@@ -505,8 +505,11 @@ export class BedrockAgentService {
           fullResponse += text;
         }
 
-        if (event.attribution?.citations) {
-          citations.push(...event.attribution.citations);
+        if ('attribution' in event && event.attribution) {
+          const attribution = event.attribution as any;
+          if (attribution.citations) {
+            citations.push(...attribution.citations);
+          }
         }
       }
     }

@@ -106,6 +106,27 @@ export class MaturityCalculationService {
 
     console.log(`📏 Using scoring rule: ${scoringRule.name}`);
 
+    // Convert Prisma Decimal types to numbers for ScoringRuleConfig
+    const scoringRuleConfig: ScoringRuleConfig = {
+      id: scoringRule.id,
+      name: scoringRule.name,
+      metricAnsweredValue: Number(scoringRule.metricAnsweredValue),
+      metricUnansweredValue: Number(scoringRule.metricUnansweredValue),
+      metricMaxLevel: Number(scoringRule.metricMaxLevel),
+      topicScoreMethod: scoringRule.topicScoreMethod,
+      topicScaleMin: Number(scoringRule.topicScaleMin),
+      topicScaleMax: Number(scoringRule.topicScaleMax),
+      topicExcludeEmpty: scoringRule.topicExcludeEmpty,
+      pillarScoreMethod: scoringRule.pillarScoreMethod,
+      pillarExcludeEmpty: scoringRule.pillarExcludeEmpty,
+      pillarMinTopics: Number(scoringRule.pillarMinTopics),
+      overallScoreMethod: scoringRule.overallScoreMethod,
+      overallExcludeEmpty: scoringRule.overallExcludeEmpty,
+      overallMinPillars: Number(scoringRule.overallMinPillars),
+      roundingPrecision: Number(scoringRule.roundingPrecision),
+      penalizeIncomplete: scoringRule.penalizeIncomplete,
+    };
+
     // 3. Get all pillars, topics, and metrics for complete structure
     const allPillars = await prisma.maturityPillar.findMany({
       where: { isActive: true },
@@ -146,7 +167,7 @@ export class MaturityCalculationService {
             const normalizedScore = this.calculateMetricScore(
               rawValue, 
               metric.level, 
-              scoringRule
+              scoringRuleConfig
             );
             
             metricScores[metric.id] = {
@@ -158,7 +179,7 @@ export class MaturityCalculationService {
             };
           } else {
             metricScores[metric.id] = {
-              score: scoringRule.metricUnansweredValue,
+              score: scoringRuleConfig.metricUnansweredValue,
               value: null,
               level: metric.level,
               weight: Number(metric.weight),
@@ -179,7 +200,7 @@ export class MaturityCalculationService {
         const topicMetrics = topic.metrics.map(m => metricScores[m.id]);
         const answeredCount = topicMetrics.filter(m => m.value !== null).length;
         
-        if (scoringRule.topicExcludeEmpty && answeredCount === 0) {
+        if (scoringRuleConfig.topicExcludeEmpty && answeredCount === 0) {
           topicScores[topic.id] = {
             score: 0,
             answered: 0,
@@ -192,7 +213,7 @@ export class MaturityCalculationService {
         
         const topicScore = this.calculateTopicScore(
           topicMetrics,
-          scoringRule,
+          scoringRuleConfig,
           answeredCount > 0
         );
         
@@ -215,7 +236,7 @@ export class MaturityCalculationService {
       const pillarTopics = pillar.topics.map(t => topicScores[t.id]);
       const answeredTopics = pillarTopics.filter(t => t.answered > 0).length;
       
-      if (scoringRule.pillarExcludeEmpty && answeredTopics === 0) {
+      if (scoringRuleConfig.pillarExcludeEmpty && answeredTopics === 0) {
         pillarScores[pillar.id] = {
           score: 0,
           level: 'INITIAL',
@@ -226,14 +247,14 @@ export class MaturityCalculationService {
         continue;
       }
       
-      if (answeredTopics < scoringRule.pillarMinTopics) {
-        warnings.push(`Pillar ${pillar.name} has ${answeredTopics} answered topics, minimum required: ${scoringRule.pillarMinTopics}`);
+      if (answeredTopics < scoringRuleConfig.pillarMinTopics) {
+        warnings.push(`Pillar ${pillar.name} has ${answeredTopics} answered topics, minimum required: ${scoringRuleConfig.pillarMinTopics}`);
       }
       
       const pillarScore = this.calculatePillarScore(
         pillarTopics,
-        scoringRule,
-        answeredTopics >= scoringRule.pillarMinTopics
+        scoringRuleConfig,
+        answeredTopics >= scoringRuleConfig.pillarMinTopics
       );
       
       pillarScores[pillar.id] = {
@@ -251,14 +272,14 @@ export class MaturityCalculationService {
     const pillarValues = Object.values(pillarScores);
     const answeredPillars = pillarValues.filter((p: any) => p.answeredTopics > 0).length;
     
-    if (answeredPillars < scoringRule.overallMinPillars) {
-      warnings.push(`Only ${answeredPillars} pillars have answers, minimum required: ${scoringRule.overallMinPillars}`);
+    if (answeredPillars < scoringRuleConfig.overallMinPillars) {
+      warnings.push(`Only ${answeredPillars} pillars have answers, minimum required: ${scoringRuleConfig.overallMinPillars}`);
     }
     
     const overallScore = this.calculateOverallScore(
       pillarValues,
-      scoringRule,
-      answeredPillars >= scoringRule.overallMinPillars
+      scoringRuleConfig,
+      answeredPillars >= scoringRuleConfig.overallMinPillars
     );
 
     const completionPercentage = (answeredMetrics / totalMetrics) * 100;
