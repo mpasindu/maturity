@@ -83,9 +83,37 @@ else
 fi
 
 # ============================================================================
-# Step 4: Login to AWS ECR
+# Step 4: Create ECR Repositories (if they don't exist)
 # ============================================================================
-echo -e "\n${YELLOW}Step 4: Authenticating with AWS ECR${NC}"
+echo -e "\n${YELLOW}Step 4: Creating ECR Repositories${NC}"
+
+create_ecr_repo() {
+  local repo_name=$1
+  
+  # Check if repository exists
+  if aws ecr describe-repositories --repository-names $repo_name --region $AWS_REGION &>/dev/null; then
+    echo -e "${GREEN}✓ Repository '$repo_name' already exists${NC}"
+  else
+    echo -e "${BLUE}Creating ECR repository: $repo_name${NC}"
+    if aws ecr create-repository \
+      --repository-name $repo_name \
+      --region $AWS_REGION \
+      --encryption-configuration encryptionType=AES &>/dev/null; then
+      echo -e "${GREEN}✓ Repository '$repo_name' created${NC}"
+    else
+      echo -e "${RED}✗ Failed to create repository '$repo_name'${NC}"
+      exit 1
+    fi
+  fi
+}
+
+create_ecr_repo "cio-maturity-metrics"
+create_ecr_repo "cio-maturity-db"
+
+# ============================================================================
+# Step 5: Login to AWS ECR
+# ============================================================================
+echo -e "\n${YELLOW}Step 5: Authenticating with AWS ECR${NC}"
 
 ECR_REGISTRY="$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
@@ -105,9 +133,9 @@ else
 fi
 
 # ============================================================================
-# Step 5: Tag Images for ECR
+# Step 6: Tag Images for ECR
 # ============================================================================
-echo -e "\n${YELLOW}Step 5: Tagging Images for ECR${NC}"
+echo -e "\n${YELLOW}Step 6: Tagging Images for ECR${NC}"
 
 echo -e "${BLUE}Tagging web application image...${NC}"
 docker tag cio-maturity-metrics:latest $ECR_REGISTRY/cio-maturity-metrics:latest
@@ -118,9 +146,9 @@ docker tag cio-maturity-db:latest $ECR_REGISTRY/cio-maturity-db:latest
 echo -e "${GREEN}✓ Database image tagged${NC}"
 
 # ============================================================================
-# Step 6: Push Images to ECR
+# Step 7: Push Images to ECR
 # ============================================================================
-echo -e "\n${YELLOW}Step 6: Pushing Images to ECR${NC}"
+echo -e "\n${YELLOW}Step 7: Pushing Images to ECR${NC}"
 
 echo -e "${BLUE}Pushing web application image...${NC}"
 if docker push $ECR_REGISTRY/cio-maturity-metrics:latest; then
@@ -139,9 +167,9 @@ else
 fi
 
 # ============================================================================
-# Step 7: Verify Images in ECR
+# Step 8: Verify Images in ECR
 # ============================================================================
-echo -e "\n${YELLOW}Step 7: Verifying Images in ECR${NC}"
+echo -e "\n${YELLOW}Step 8: Verifying Images in ECR${NC}"
 
 echo -e "${BLUE}Checking cio-maturity-metrics repository...${NC}"
 aws ecr describe-images \
@@ -158,9 +186,9 @@ aws ecr describe-images \
   --output table 2>/dev/null || echo -e "${YELLOW}Note: Could not retrieve image details${NC}"
 
 # ============================================================================
-# Step 8: Git Commit and Push
+# Step 9: Git Commit and Push
 # ============================================================================
-echo -e "\n${YELLOW}Step 8: Git Commit and Push${NC}"
+echo -e "\n${YELLOW}Step 9: Git Commit and Push${NC}"
 
 # Check if there are any changes to commit
 if [ -z "$(git status --porcelain)" ]; then
@@ -189,7 +217,7 @@ else
 fi
 
 # ============================================================================
-# Step 9: Display Summary
+# Step 10: Display Summary
 # ============================================================================
 echo -e "\n${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║  Deployment Complete!                                     ║${NC}"
