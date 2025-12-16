@@ -110,6 +110,10 @@ spec:
             secretKeyRef:
               name: bedrock-credentials
               key: api-key
+        - name: BEDROCK_MODEL_ID
+          value: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+        - name: AWS_REGION
+          value: "us-east-1"
         livenessProbe:
           httpGet:
             path: /
