@@ -9,12 +9,22 @@ echo "║  Maturity Assessment - Quick Deployment Setup              ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 
-# 1. Set credentials
-echo "Step 1: Setting AWS Credentials..."
-export AWS_ACCESS_KEY_ID="***REDACTED***"
-export AWS_SECRET_ACCESS_KEY="***REDACTED***"
-export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEJ7//////////wEaCXVzLWVhc3QtMSJIMEYCIQCSp6Y1EcWVMj94+yQpPxgVB77od3y50tBI0HwKxBHTeAIhAPb4/qcFHCDA6Qvd9SGgdFJgncdTendutWOqCKM/U4/HKogDCGcQABoMNDc1ODgyMzkxNjMxIgzK2Z8LS2yrmyPTRmAq5QJilXe4IyUE8CZYItDNBrYlNAzTBcHncLsJ1B8EYcm5oPTGquX+abfbl3dkBEp8ojZeJmWPdz2R6tnZF3jYdX0f+dsBzmFdLw/hlElRPY/gVrAvLxN2hIjNGg4NMmeOZV+Btc5w/4Ck9fQhcMoiRmeL68vT6+3CHnDHm5TDvDoRgmQbxYgWHAbjVg1Bjevo3bfVBpMUexVvelpKFhhSWZiLxGeK9oZtJ/cjyLDdxwHePJ+wmG7nc6KfJTs9ApiN7WWLgHj0Kt8XLHmTcMqaVIErsR8p5j/bKZVSlJv6uIHQV8DZepLyKJIAEOXfQovpDc5+wbrsqOIE03vM9ksfmST/DPMwUKycHSj36b542o39YlrOxCpA7WDypsx0UqZMi4NzmM/zd6/Z/TZ3C87hwDPtnoArCik5axDB8g192G2lD3/QWSQdgoBwhHvMHXk5TuVVZpQRnYHzadkRfS9w7LYe2E57vl4w3cGFygY6owHnMuFFxvaynDzupR9Kale9ncHgS+ScBjwgRcNblhIDfJotgHDXIQ5zNNg8IXn8VNOvabKi4BCxEFVSNYXP6BwBumo05C6gq2IhQR6yV1jfYrrKxvuBs4dAXzA/TkF2QNvr+x1+yljD9HS9uGkZjHyYOZOB+hZj3MWiuZOh9adS1LgNhoZjteH8A9AZh4wzJbcDH/gUpAbRTPG4Tw82RdZAkfa7"
-echo "✓ Credentials set"
+# 1. Load credentials from .env
+echo "Step 1: Loading AWS Credentials..."
+if [ -f ".env" ]; then
+  source .env
+  echo "✓ Credentials loaded from .env"
+else
+  echo "✗ .env file not found"
+  echo ""
+  echo "Create .env file:"
+  echo "  cp .env.example .env"
+  echo "  # Edit .env with your AWS credentials"
+  echo "  source .env"
+  echo "  ./deploy-quick.sh"
+  echo ""
+  exit 1
+fi
 echo ""
 
 # 2. Verify setup

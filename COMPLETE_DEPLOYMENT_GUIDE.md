@@ -5,19 +5,28 @@
 ### On Any Machine
 
 1. **Clone and Navigate**
+
    ```bash
    git clone <repo>
    cd maturity
    ```
 
 2. **Set AWS Credentials**
+
    ```bash
-   export AWS_ACCESS_KEY_ID="***REDACTED***"
-   export AWS_SECRET_ACCESS_KEY="***REDACTED***"
-   export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEJ7//////////wEaCXVzLWVhc3QtMSJIMEYCIQCSp6Y1EcWVMj94+yQpPxgVB77od3y50tBI0HwKxBHTeAIhAPb4/qcFHCDA6Qvd9SGgdFJgncdTendutWOqCKM/U4/HKogDCGcQABoMNDc1ODgyMzkxNjMxIgzK2Z8LS2yrmyPTRmAq5QJilXe4IyUE8CZYItDNBrYlNAzTBcHncLsJ1B8EYcm5oPTGquX+abfbl3dkBEp8ojZeJmWPdz2R6tnZF3jYdX0f+dsBzmFdLw/hlElRPY/gVrAvLxN2hIjNGg4NMmeOZV+Btc5w/4Ck9fQhcMoiRmeL68vT6+3CHnDHm5TDvDoRgmQbxYgWHAbjVg1Bjevo3bfVBpMUexVvelpKFhhSWZiLxGeK9oZtJ/cjyLDdxwHePJ+wmG7nc6KfJTs9ApiN7WWLgHj0Kt8XLHmTcMqaVIErsR8p5j/bKZVSlJv6uIHQV8DZepLyKJIAEOXfQovpDc5+wbrsqOIE03vM9ksfmST/DPMwUKycHSj36b542o39YlrOxCpA7WDypsx0UqZMi4NzmM/zd6/Z/TZ3C87hwDPtnoArCik5axDB8g192G2lD3/QWSQdgoBwhHvMHXk5TuVVZpQRnYHzadkRfS9w7LYe2E57vl4w3cGFygY6owHnMuFFxvaynDzupR9Kale9ncHgS+ScBjwgRcNblhIDfJotgHDXIQ5zNNg8IXn8VNOvabKi4BCxEFVSNYXP6BwBumo05C6gq2IhQR6yV1jfYrrKxvuBs4dAXzA/TkF2QNvr+x1+yljD9HS9uGkZjHyYOZOB+hZj3MWiuZOh9adS1LgNhoZjteH8A9AZh4wzJbcDH/gUpAbRTPG4Tw82RdZAkfa7"
+   # Option A: Copy example and edit
+   cp .env.example .env
+   # Edit .env with your credentials
+   source .env
+
+   # Option B: Export directly
+   export AWS_ACCESS_KEY_ID="your-key"
+   export AWS_SECRET_ACCESS_KEY="your-secret"
+   export AWS_SESSION_TOKEN="your-token" # If using STS
    ```
 
 3. **Run Deployment Script**
+
    ```bash
    chmod +x deploy.sh
    ./deploy.sh
@@ -41,6 +50,7 @@
 - **npm** - For package management
 
 Install on macOS:
+
 ```bash
 brew install docker aws-cli kubectl node
 ```
@@ -62,6 +72,7 @@ maturity/
 ## What Gets Deployed
 
 ### Web Application
+
 - **Registry**: ECR (`cio-maturity-metrics:latest`)
 - **Cluster**: CIO-initiatives (EKS)
 - **Namespace**: maturity-assessment
@@ -69,6 +80,7 @@ maturity/
 - **Health Check**: Every 30 seconds
 
 ### Database
+
 - **Registry**: ECR (`cio-maturity-db:latest`)
 - **Cluster**: CIO-initiatives (EKS)
 - **Namespace**: maturity-assessment
@@ -80,6 +92,7 @@ maturity/
 ## Configuration
 
 ### Environment Variables (Set Before Running)
+
 ```bash
 export AWS_ACCESS_KEY_ID="your-key"
 export AWS_SECRET_ACCESS_KEY="your-secret"
@@ -87,6 +100,7 @@ export AWS_SESSION_TOKEN="your-token"
 ```
 
 ### Default Configuration (In deploy.sh)
+
 - **AWS_REGION**: us-east-1
 - **EKS_CLUSTER**: CIO-initiatives
 - **NAMESPACE**: maturity-assessment
@@ -98,6 +112,7 @@ Edit `deploy.sh` to change these values.
 ## Post-Deployment
 
 ### Check Deployment Status
+
 ```bash
 kubectl get all -n maturity-assessment
 kubectl describe deployment maturity-web -n maturity-assessment
@@ -105,6 +120,7 @@ kubectl describe deployment maturity-db -n maturity-assessment
 ```
 
 ### View Logs
+
 ```bash
 # Web app logs
 kubectl logs -f deployment/maturity-web -n maturity-assessment
@@ -114,6 +130,7 @@ kubectl logs -f deployment/maturity-db -n maturity-assessment
 ```
 
 ### Get Service Endpoints
+
 ```bash
 # Web application URL
 kubectl get service maturity-web -n maturity-assessment
@@ -123,6 +140,7 @@ kubectl get service maturity-db -n maturity-assessment
 ```
 
 ### Scale Deployments
+
 ```bash
 kubectl scale deployment maturity-web --replicas=3 -n maturity-assessment
 kubectl scale deployment maturity-db --replicas=2 -n maturity-assessment
@@ -131,22 +149,26 @@ kubectl scale deployment maturity-db --replicas=2 -n maturity-assessment
 ## Troubleshooting
 
 ### Script Stuck at "Logging into Docker"
+
 - Check Docker daemon is running: `docker ps`
 - Verify AWS credentials are valid
 - Try manually: `aws ecr get-login-password --region us-east-1 | docker login ...`
 
 ### kubectl not configured
+
 ```bash
 aws eks update-kubeconfig --name CIO-initiatives --region us-east-1
 ```
 
 ### Pod not starting
+
 ```bash
 kubectl describe pod <pod-name> -n maturity-assessment
 kubectl logs <pod-name> -n maturity-assessment
 ```
 
 ### Database connection fails
+
 - Verify database pod is running: `kubectl get pods -n maturity-assessment`
 - Check credentials in Kubernetes secret: `kubectl get secret maturity-db-secret -n maturity-assessment -o yaml`
 - Test connection: `kubectl exec -it <web-pod> -n maturity-assessment -- env | grep DATABASE`
@@ -200,6 +222,7 @@ aws ecr delete-repository --repository-name cio-maturity-db --force --region us-
 ## Support
 
 For issues or questions:
+
 1. Check logs: `kubectl logs deployment/<name> -n maturity-assessment`
 2. Describe pod: `kubectl describe pod <pod-name> -n maturity-assessment`
 3. Check events: `kubectl get events -n maturity-assessment`

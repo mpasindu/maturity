@@ -66,13 +66,28 @@ verify_aws_credentials() {
   log_info "Verifying AWS credentials..."
   
   if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-    log_error "AWS credentials not set. Please export AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+    log_error "AWS credentials not set"
+    echo ""
+    echo "To set credentials, run one of these:"
+    echo ""
+    echo "Option 1 - Load from .env file:"
+    echo "  cp .env.example .env"
+    echo "  # Edit .env with your credentials"
+    echo "  source .env"
+    echo "  ./deploy.sh"
+    echo ""
+    echo "Option 2 - Export directly:"
+    echo "  export AWS_ACCESS_KEY_ID='your-key'"
+    echo "  export AWS_SECRET_ACCESS_KEY='your-secret'"
+    echo "  export AWS_SESSION_TOKEN='your-token' (if using STS)"
+    echo "  ./deploy.sh"
+    echo ""
     exit 1
   fi
   
   local account=$(aws sts get-caller-identity --region $AWS_REGION --query Account --output text 2>/dev/null)
   if [ $? -ne 0 ]; then
-    log_error "Failed to verify AWS credentials"
+    log_error "Failed to verify AWS credentials - check if they are valid"
     exit 1
   fi
   
