@@ -1,19 +1,21 @@
 #!/bin/bash
 
 # Deploy PostgreSQL with Restored Dump to ECS
-# Usage: ./deploy-db-to-ecs.sh
+# Usage: source .env && ./deploy-db-to-ecs.sh
 
 set -e
 
-# AWS Configuration
-export AWS_ACCESS_KEY_ID="***REDACTED***"
-export AWS_SECRET_ACCESS_KEY="***REDACTED***"
-export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEJ7//////////wEaCXVzLWVhc3QtMSJIMEYCIQCSp6Y1EcWVMj94+yQpPxgVB77od3y50tBI0HwKxBHTeAIhAPb4/qcFHCDA6Qvd9SGgdFJgncdTendutWOqCKM/U4/HKogDCGcQABoMNDc1ODgyMzkxNjMxIgzK2Z8LS2yrmyPTRmAq5QJilXe4IyUE8CZYItDNBrYlNAzTBcHncLsJ1B8EYcm5oPTGquX+abfbl3dkBEp8ojZeJmWPdz2R6tnZF3jYdX0f+dsBzmFdLw/hlElRPY/gVrAvLxN2hIjNGg4NMmeOZV+Btc5w/4Ck9fQhcMoiRmeL68vT6+3CHnDHm5TDvDoRgmQbxYgWHAbjVg1Bjevo3bfVBpMUexVvelpKFhhSWZiLxGeK9oZtJ/cjyLDdxwHePJ+wmG7nc6KfJTs9ApiN7WWLgHj0Kt8XLHmTcMqaVIErsR8p5j/bKZVSlJv6uIHQV8DZepLyKJIAEOXfQovpDc5+wbrsqOIE03vM9ksfmST/DPMwUKycHSj36b542o39YlrOxCpA7WDypsx0UqZMi4NzmM/zd6/Z/TZ3C87hwDPtnoArCik5axDB8g192G2lD3/QWSQdgoBwhHvMHXk5TuVVZpQRnYHzadkRfS9w7LYe2E57vl4w3cGFygY6owHnMuFFxvaynDzupR9Kale9ncHgS+ScBjwgRcNblhIDfJotgHDXIQ5zNNg8IXn8VNOvabKi4BCxEFVSNYXP6BwBumo05C6gq2IhQR6yV1jfYrrKxvuBs4dAXzA/TkF2QNvr+x1+yljD9HS9uGkZjHyYOZOB+hZj3MWiuZOh9adS1LgNhoZjteH8A9AZh4wzJbcDH/gUpAbRTPG4Tw82RdZAkfa7"
+# Verify AWS credentials are loaded from environment
+if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+  echo "Error: AWS credentials not set"
+  echo "Please load them first: source .env"
+  exit 1
+fi
 
-echo "AWS Credentials loaded from environment"
+echo "✓ AWS Credentials loaded from environment"
 
 # Configuration
-AWS_REGION="us-east-1"
+AWS_REGION="${AWS_REGION:-us-east-1}"
 ECR_REPO_NAME="cio-maturity-metrics"
 ECS_CLUSTER="CIO-initiatives"
 ECS_SERVICE="maturity-db"
