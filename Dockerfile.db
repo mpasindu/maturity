@@ -11,8 +11,8 @@ RUN mkdir -p /docker-entrypoint-initdb.d && \
     'set -e' \
     'echo "Init script starting..."' \
     'if [ -f /tmp/maturity_db_backup.dump ]; then' \
-    '  echo "Restoring database from dump..."' \
-    '  pg_restore --clean -U postgres -d postgres /tmp/maturity_db_backup.dump 2>&1 || true' \
+    '  echo "Restoring database from dump to maturity database..."' \
+    '  pg_restore --clean --if-exists -U postgres -d maturity /tmp/maturity_db_backup.dump 2>&1 || true' \
     '  echo "Database restore completed"' \
     '  rm -f /tmp/maturity_db_backup.dump' \
     'else' \
