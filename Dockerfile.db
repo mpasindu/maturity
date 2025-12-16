@@ -5,20 +5,19 @@ FROM postgres:15-alpine
 COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
 
 # Create restore script
-RUN cat > /docker-entrypoint-initdb.d/01-restore.sh << 'EOF'
-#!/bin/bash
-set -e
-echo "Starting PostgreSQL database restore..."
-if [ -f /tmp/maturity_db_backup.dump ]; then
-  echo "Restoring from backup dump..."
-  pg_restore -U postgres -d maturity /tmp/maturity_db_backup.dump 2>&1 || true
-  rm -f /tmp/maturity_db_backup.dump
-  echo "Database restore completed"
-else
-  echo "No backup dump found, creating empty database"
-fi
-EOF
-chmod +x /docker-entrypoint-initdb.d/01-restore.sh
+RUN printf '%s\n' \
+  '#!/bin/bash' \
+  'set -e' \
+  'echo "Starting PostgreSQL database restore..."' \
+  'if [ -f /tmp/maturity_db_backup.dump ]; then' \
+  '  echo "Restoring from backup dump..."' \
+  '  pg_restore -U postgres -d maturity /tmp/maturity_db_backup.dump 2>&1 || true' \
+  '  rm -f /tmp/maturity_db_backup.dump' \
+  '  echo "Database restore completed"' \
+  'else' \
+  '  echo "No backup dump found, creating empty database"' \
+  'fi' > /docker-entrypoint-initdb.d/01-restore.sh && \
+  chmod +x /docker-entrypoint-initdb.d/01-restore.sh
 
 # Set environment variables
 ENV POSTGRES_DB=maturity
