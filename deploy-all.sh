@@ -91,20 +91,28 @@ create_ecr_repo() {
   local repo_name=$1
   
   # Check if repository exists
-  if aws ecr describe-repositories --repository-names $repo_name --region $AWS_REGION &>/dev/null; then
+  echo -e "${BLUE}Checking repository: $repo_name${NC}"
+  if aws ecr describe-repositories --repository-names $repo_name --region $AWS_REGION 2>/dev/null | grep -q "repositoryName"; then
     echo -e "${GREEN}✓ Repository '$repo_name' already exists${NC}"
-  else
-    echo -e "${BLUE}Creating ECR repository: $repo_name${NC}"
-    if aws ecr create-repository \
-      --repository-name $repo_name \
-      --region $AWS_REGION \
-      --encryption-configuration encryptionType=AES &>/dev/null; then
-      echo -e "${GREEN}✓ Repository '$repo_name' created${NC}"
-    else
-      echo -e "${RED}✗ Failed to create repository '$repo_name'${NC}"
-      exit 1
-    fi
+    return 0
   fi
+  
+  echo -e "${BLUE}Creating ECR repository: $repo_name${NC}"
+  
+  # Try with basic options first
+  if aws ecr create-repository \
+    --repository-name $repo_name \
+    --region $AWS_REGION 2>&1 | grep -q "repositoryArn"; then
+    echo -e "${GREEN}✓ Repository '$repo_name' created${NC}"
+    return 0
+  fi
+  
+  # If creation fails, show warning but continue
+  echo -e "${YELLOW}⚠ Could not create repository '$repo_name' automatically${NC}"
+  echo -e "${YELLOW}Create it manually via AWS Console or run:${NC}"
+  echo -e "${YELLOW}  aws ecr create-repository --repository-name $repo_name --region $AWS_REGION${NC}"
+  echo -e "${YELLOW}Continuing with deployment...${NC}"
+  return 0
 }
 
 create_ecr_repo "cio-maturity-metrics"
@@ -231,16 +239,20 @@ echo -e "  Web Image:               $ECR_REGISTRY/cio-maturity-metrics:latest"
 echo -e "  Database Image:          $ECR_REGISTRY/cio-maturity-db:latest"
 
 echo -e "\n${GREEN}Next Steps:${NC}"
-echo -e "  1. Connect to EKS cluster:"
+echo -e "  1. If ECR repositories were not created automatically, create them manually:"
+echo -e "     ${YELLOW}aws ecr create-repository --repository-name cio-maturity-metrics --region $AWS_REGION${NC}"
+echo -e "     ${YELLOW}aws ecr create-repository --repository-name cio-maturity-db --region $AWS_REGION${NC}"
+echo -e ""
+echo -e "  2. Connect to EKS cluster:"
 echo -e "     ${YELLOW}aws eks update-kubeconfig --region $AWS_REGION --name CIO-initiatives${NC}"
 echo -e ""
-echo -e "  2. Deploy to Kubernetes:"
+echo -e "  3. Deploy to Kubernetes:"
 echo -e "     ${YELLOW}kubectl apply -f deployment.yaml${NC}"
 echo -e ""
-echo -e "  3. Check deployment status:"
+echo -e "  4. Check deployment status:"
 echo -e "     ${YELLOW}kubectl get pods -n maturity-assessment${NC}"
 echo -e ""
-echo -e "  4. Get application URL:"
+echo -e "  5. Get application URL:"
 echo -e "     ${YELLOW}kubectl get svc maturity-web -n maturity-assessment${NC}"
 
 echo -e "\n${GREEN}✓ All done!${NC}\n"
