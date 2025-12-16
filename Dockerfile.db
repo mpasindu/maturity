@@ -1,43 +1,43 @@
 # PostgreSQL Database with Pre-Restored Dump
-FROM postgres:16-alpine
+FROM postgres:17-alpine
 
 # Copy the database dump
 COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
 
 # Create entrypoint script that restores if needed
 RUN printf '%s\n' \
-  '#!/bin/bash' \
-  'set -e' \
-  'export POSTGRES_INITDB_ARGS="-c max_connections=100"' \
-  '' \
-  '# Source the original postgres entrypoint' \
-  'source /usr/local/bin/docker-entrypoint.sh postgres &' \
-  'PID=$!' \
-  '' \
-  '# Wait for postgres to be ready' \
-  'for i in {1..30}; do' \
-  '  if pg_isready -U postgres 2>/dev/null; then break; fi' \
-  '  sleep 1' \
-  'done' \
-  '' \
-  '# Check if database is empty and restore if needed' \
-  'if [ -f /tmp/maturity_db_backup.dump ]; then' \
-  '  TABLES=$(psql -U postgres -d postgres -t -c "SELECT count(*) FROM pg_tables WHERE schemaname = '\''public'\''; " 2>/dev/null || echo "0")' \
-  '  if [ "$TABLES" = "0" ]; then' \
-  '    echo "Restoring database from dump..."' \
-  '    pg_restore --clean -U postgres -d postgres /tmp/maturity_db_backup.dump 2>&1 || true' \
-  '    echo "Database restore completed"' \
-  '  else' \
-  '    echo "Database already populated, skipping restore"' \
-  '  fi' \
-  '  rm -f /tmp/maturity_db_backup.dump' \
-  'fi' \
-  '' \
-  'wait $PID' \
-  'exit_code=$?' \
-  'exit $exit_code' \
-  > /usr/local/bin/docker-entrypoint-restore.sh && \
-  chmod +x /usr/local/bin/docker-entrypoint-restore.sh
+    '#!/bin/bash' \
+    'set -e' \
+    'export POSTGRES_INITDB_ARGS="-c max_connections=100"' \
+    '' \
+    '# Source the original postgres entrypoint' \
+    'source /usr/local/bin/docker-entrypoint.sh postgres &' \
+    'PID=$!' \
+    '' \
+    '# Wait for postgres to be ready' \
+    'for i in {1..30}; do' \
+    '  if pg_isready -U postgres 2>/dev/null; then break; fi' \
+    '  sleep 1' \
+    'done' \
+    '' \
+    '# Check if database is empty and restore if needed' \
+    'if [ -f /tmp/maturity_db_backup.dump ]; then' \
+    '  TABLES=$(psql -U postgres -d postgres -t -c "SELECT count(*) FROM pg_tables WHERE schemaname = '\''public'\''; " 2>/dev/null || echo "0")' \
+    '  if [ "$TABLES" = "0" ]; then' \
+    '    echo "Restoring database from dump..."' \
+    '    pg_restore --clean -U postgres -d postgres /tmp/maturity_db_backup.dump 2>&1 || true' \
+    '    echo "Database restore completed"' \
+    '  else' \
+    '    echo "Database already populated, skipping restore"' \
+    '  fi' \
+    '  rm -f /tmp/maturity_db_backup.dump' \
+    'fi' \
+    '' \
+    'wait $PID' \
+    'exit_code=$?' \
+    'exit $exit_code' \
+    > /usr/local/bin/docker-entrypoint-restore.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint-restore.sh
 
 # Set environment variables
 ENV POSTGRES_DB=maturity
