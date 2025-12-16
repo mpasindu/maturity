@@ -1,31 +1,31 @@
 # PostgreSQL Database with Restored Dump
-FROM postgres:15-alpine AS builder
+FROM postgres:15-alpine
 
 # Copy the database dump
 COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
 
-# Create initialization script that will be run by postgres entrypoint
-RUN mkdir -p /docker-entrypoint-initdb.d && \
-    printf '%s\n' \
+# Create a wrapper entrypoint script that always tries to restore
+RUN printf '%s\n' \
   '#!/bin/bash' \
   'set -e' \
-  'echo "Starting PostgreSQL database restore..."' \
-  'if [ -f /tmp/maturity_db_backup.dump ]; then' \
-  '  echo "Restoring from backup dump at $(date)"' \
-  '  pg_restore --clean --if-exists -U postgres -d "$POSTGRES_DB" /tmp/maturity_db_backup.dump' \
-  '  echo "Database restore completed at $(date)"' \
+  'export PGDATA=/var/lib/postgresql/data/pgdata' \
+  '' \
+  'if [ ! -s "$PGDATA/PG_VERSION" ]; then' \
+  '  echo "Fresh database detected, initializing..."' \
+  '  mkdir -p "$PGDATA"' \
+  '  chmod 700 "$PGDATA"' \
+  '  initdb -U postgres' \
+  'fi' \
+  '' \
+  'if [ -f /tmp/maturity_db_backup.dump ] && [ -z "$(psql -U postgres -d postgres -t -c \"SELECT 1 FROM information_schema.tables WHERE table_schema = '\''public'\'' LIMIT 1;\" 2>/dev/null || true)" ]; then' \
+  '  echo "Database is empty, restoring from dump..."' \
+  '  pg_restore --clean --if-exists -U postgres -d postgres /tmp/maturity_db_backup.dump 2>&1 || echo "Restore completed with warnings"' \
   '  rm -f /tmp/maturity_db_backup.dump' \
-  'else' \
-  '  echo "No backup dump found"' \
-  'fi' > /docker-entrypoint-initdb.d/01-restore.sh && \
-    chmod +x /docker-entrypoint-initdb.d/01-restore.sh
-
-# Final stage
-FROM postgres:15-alpine
-
-# Copy the entrypoint script from builder
-COPY --from=builder /docker-entrypoint-initdb.d/01-restore.sh /docker-entrypoint-initdb.d/01-restore.sh
-COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
+  '  echo "Restore completed"' \
+  'fi' \
+  '' \
+  'exec postgres' > /usr/local/bin/docker-entrypoint-wrapper.sh && \
+  chmod +x /usr/local/bin/docker-entrypoint-wrapper.sh
 
 # Set environment variables
 ENV POSTGRES_DB=maturity
@@ -37,3 +37,6 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
     CMD pg_isready -U postgres
 
 EXPOSE 5432
+
+# Use our custom entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-wrapper.sh"]
