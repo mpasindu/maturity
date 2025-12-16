@@ -1,31 +1,40 @@
 # PostgreSQL Database with Restored Dump
-FROM postgres:15-alpine
+FROM postgres:15-alpine AS builder
 
 # Copy the database dump
 COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
 
-# Create restore script
-RUN printf '%s\n' \
+# Create initialization script that will be run by postgres entrypoint
+RUN mkdir -p /docker-entrypoint-initdb.d && \
+    printf '%s\n' \
   '#!/bin/bash' \
   'set -e' \
   'echo "Starting PostgreSQL database restore..."' \
   'if [ -f /tmp/maturity_db_backup.dump ]; then' \
-  '  echo "Restoring from backup dump..."' \
-  '  pg_restore -U postgres -d maturity /tmp/maturity_db_backup.dump 2>&1 || true' \
+  '  echo "Restoring from backup dump at $(date)"' \
+  '  pg_restore --clean --if-exists -U postgres -d "$POSTGRES_DB" /tmp/maturity_db_backup.dump' \
+  '  echo "Database restore completed at $(date)"' \
   '  rm -f /tmp/maturity_db_backup.dump' \
-  '  echo "Database restore completed"' \
   'else' \
-  '  echo "No backup dump found, creating empty database"' \
+  '  echo "No backup dump found"' \
   'fi' > /docker-entrypoint-initdb.d/01-restore.sh && \
-  chmod +x /docker-entrypoint-initdb.d/01-restore.sh
+    chmod +x /docker-entrypoint-initdb.d/01-restore.sh
+
+# Final stage
+FROM postgres:15-alpine
+
+# Copy the entrypoint script from builder
+COPY --from=builder /docker-entrypoint-initdb.d/01-restore.sh /docker-entrypoint-initdb.d/01-restore.sh
+COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
 
 # Set environment variables
 ENV POSTGRES_DB=maturity
 ENV POSTGRES_USER=postgres
 ENV POSTGRES_PASSWORD=maturity123
+ENV POSTGRES_INITDB_ARGS="-c max_connections=200"
 
 # Health check
-HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
     CMD pg_isready -U postgres
 
 EXPOSE 5432
