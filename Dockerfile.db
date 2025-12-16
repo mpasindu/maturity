@@ -2,12 +2,26 @@
 FROM postgres:15-alpine
 
 # Copy the database dump
-COPY maturity_db_backup.dump /docker-entrypoint-initdb.d/01-restore.sql
+COPY maturity_db_backup.dump /tmp/maturity_db_backup.dump
+
+# Create restore script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Starting PostgreSQL database restore..."\n\
+if [ -f /tmp/maturity_db_backup.dump ]; then\n\
+  echo "Restoring from backup dump..."\n\
+  pg_restore -U postgres -d maturity /tmp/maturity_db_backup.dump 2>&1 || true\n\
+  rm -f /tmp/maturity_db_backup.dump\n\
+  echo "Database restore completed"\n\
+else\n\
+  echo "No backup dump found, creating empty database"\n\
+fi' > /docker-entrypoint-initdb.d/01-restore.sh && \
+chmod +x /docker-entrypoint-initdb.d/01-restore.sh
 
 # Set environment variables
-ENV POSTGRES_DB=postgres
+ENV POSTGRES_DB=maturity
 ENV POSTGRES_USER=postgres
-ENV POSTGRES_PASSWORD=Amazon123!
+ENV POSTGRES_PASSWORD=maturity123
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
